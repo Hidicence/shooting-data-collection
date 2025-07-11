@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import ClientWrapper from '@/components/ClientWrapper'
 
 export const metadata: Metadata = {
   title: '拍攝數據收集系統',
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="zh-TW">
       <body className="min-h-screen">
         <div className="container mx-auto max-w-md">
-          {children}
+          <ClientWrapper>
+            {children}
+          </ClientWrapper>
         </div>
       </body>
     </html>

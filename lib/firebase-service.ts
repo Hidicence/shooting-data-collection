@@ -63,6 +63,7 @@ export interface CoordinatorRecord {
   mealCount: string
   recycleWeight: string
   recycleTypes: string[]
+  photoUrls?: string[]
   notes: string
   projectId: string
   projectName: string

@@ -17,73 +17,71 @@ import {
   UtensilsCrossed,
   Recycle
 } from 'lucide-react'
-
-interface PersonalRecord {
-  id: number
-  name: string
-  date: string
-  mileage: string
-  startLocation: string
-  endLocation: string
-  departurePhoto: string | null
-  returnPhoto: string | null
-  notes: string
-  timestamp: string
-}
-
-interface CoordinatorRecord {
-  id: number
-  date: string
-  coordinatorName: string
-  location: string
-  electricityUsage: string
-  electricityStartReading: string
-  electricityEndReading: string
-  waterWeight: string
-  waterBottleCount: string
-  foodWasteWeight: string
-  mealCount: string
-  recycleWeight: string
-  recycleTypes: string[]
-  notes: string
-  timestamp: string
-}
+import { storageAdapter, type PersonalRecord, type CoordinatorRecord, type Project } from '@/lib/storage-adapter'
 
 export default function DashboardPage() {
   const [personalData, setPersonalData] = useState<PersonalRecord[]>([])
   const [coordinatorData, setCoordinatorData] = useState<CoordinatorRecord[]>([])
   const [activeTab, setActiveTab] = useState<'personal' | 'coordinator'>('personal')
   const [selectedRecord, setSelectedRecord] = useState<PersonalRecord | CoordinatorRecord | null>(null)
-  const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<number | null>(null)
+  const [projects, setProjects] = useState<Project[]>([])
+  const [selectedProject, setSelectedProject] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load data from localStorage
-    const personal = JSON.parse(localStorage.getItem('personalData') || '[]')
-    const coordinator = JSON.parse(localStorage.getItem('coordinatorData') || '[]')
-    const projectsData = JSON.parse(localStorage.getItem('projects') || '[]')
+    // Load data using storage adapter (Firebase/localStorage)
+    const loadData = async () => {
+      try {
+        console.log('🔄 正在載入儀表板數據...')
+        
+        // Load projects
+        const projectsData = await storageAdapter.getProjects()
+        console.log('✅ 專案數據載入成功:', projectsData.length, '個專案')
+        setProjects(projectsData)
+        
+        // Load personal records
+        const personal = await storageAdapter.getPersonalRecords()
+        console.log('✅ 個人記錄載入成功:', personal.length, '筆記錄')
+        setPersonalData(personal)
+        
+        // Load coordinator records
+        const coordinator = await storageAdapter.getCoordinatorRecords()
+        console.log('✅ 統整記錄載入成功:', coordinator.length, '筆記錄')
+        setCoordinatorData(coordinator)
+      } catch (error) {
+        console.error('❌ 載入儀表板數據失敗:', error)
+      }
+    }
     
-    setPersonalData(personal)
-    setCoordinatorData(coordinator)
-    setProjects(projectsData)
+    loadData()
   }, [])
 
-  const deletePersonalRecord = (id: number) => {
-    const updatedData = personalData.filter(record => record.id !== id)
-    setPersonalData(updatedData)
-    localStorage.setItem('personalData', JSON.stringify(updatedData))
+  const deletePersonalRecord = async (id: string) => {
+    try {
+      await storageAdapter.deletePersonalRecord(id)
+      // Reload data
+      const personal = await storageAdapter.getPersonalRecords()
+      setPersonalData(personal)
+    } catch (error) {
+      console.error('❌ 刪除個人記錄失敗:', error)
+    }
   }
 
-  const deleteCoordinatorRecord = (id: number) => {
-    const updatedData = coordinatorData.filter(record => record.id !== id)
-    setCoordinatorData(updatedData)
-    localStorage.setItem('coordinatorData', JSON.stringify(updatedData))
+  const deleteCoordinatorRecord = async (id: string) => {
+    try {
+      await storageAdapter.deleteCoordinatorRecord(id)
+      // Reload data
+      const coordinator = await storageAdapter.getCoordinatorRecords()
+      setCoordinatorData(coordinator)
+    } catch (error) {
+      console.error('❌ 刪除統整記錄失敗:', error)
+    }
   }
 
   const exportData = () => {
     const allData = {
       personalRecords: personalData,
       coordinatorRecords: coordinatorData,
+      projects: projects,
       exportDate: new Date().toISOString()
     }
     
@@ -100,26 +98,17 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url)
   }
 
-  const clearAllData = () => {
-    if (confirm('確定要清除所有數據嗎？此操作無法復原。')) {
-      localStorage.removeItem('personalData')
-      localStorage.removeItem('coordinatorData')
-      setPersonalData([])
-      setCoordinatorData([])
-    }
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-TW')
   }
 
   // Filter data by selected project
   const filteredPersonalData = selectedProject 
-    ? personalData.filter(record => (record as any).projectId === selectedProject)
+    ? personalData.filter(record => record.projectId === selectedProject)
     : personalData
   
   const filteredCoordinatorData = selectedProject
-    ? coordinatorData.filter(record => (record as any).projectId === selectedProject)
+    ? coordinatorData.filter(record => record.projectId === selectedProject)
     : coordinatorData
 
   // Statistics
@@ -181,7 +170,7 @@ export default function DashboardPage() {
         </div>
         <div className="card">
           <div className="flex items-center">
-            <Zap className="w-8 h-8 text-yellow-600 mr-3" />
+            <Zap className="w-8 h-8 text-orange-600 mr-3" />
             <div>
               <p className="text-sm text-gray-600">總用電</p>
               <p className="text-xl font-bold">{totalElectricity.toFixed(1)} kWh</p>
@@ -197,7 +186,7 @@ export default function DashboardPage() {
             <label className="text-sm font-medium text-gray-700">專案篩選</label>
             <select
               value={selectedProject || ''}
-              onChange={(e) => setSelectedProject(e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) => setSelectedProject(e.target.value || null)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
               <option value="">所有專案</option>
@@ -246,57 +235,49 @@ export default function DashboardPage() {
       {activeTab === 'personal' && (
         <div className="space-y-4">
           {filteredPersonalData.length === 0 ? (
-            <div className="card text-center py-8">
+            <div className="text-center py-12">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">尚無個人里程記錄</p>
-              <Link href="/personal" className="btn-primary mt-4 inline-block">
-                開始記錄
-              </Link>
+              <p className="text-gray-500">尚無個人記錄數據</p>
             </div>
           ) : (
             filteredPersonalData.map((record) => (
               <div key={record.id} className="card">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{record.name}</h3>
-                    <p className="text-sm text-gray-600 flex items-center">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <Users className="w-4 h-4 text-blue-600 mr-2" />
+                      <span className="font-medium">{record.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">{formatDate(record.date)}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
+                      <MapPin className="w-4 h-4 mr-1" />
+                      <span>{record.startLocation} → {record.endLocation}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="w-4 h-4 mr-1" />
-                      {formatDate(record.date)}
-                    </p>
+                      <span>里程: {record.mileage} km</span>
+                    </div>
+                    {record.projectName && (
+                      <div className="mt-2 text-sm text-blue-600">
+                        專案: {record.projectName}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setSelectedRecord(record)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      className="text-blue-600 hover:text-blue-800"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deletePersonalRecord(record.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      onClick={() => deletePersonalRecord(record.id!)}
+                      className="text-red-600 hover:text-red-800"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600">里程數</p>
-                    <p className="font-medium">{record.mileage} km</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600">路線</p>
-                    <p className="font-medium">{record.startLocation} → {record.endLocation}</p>
-                  </div>
-                </div>
-                
-                {(record.departurePhoto || record.returnPhoto) && (
-                  <div className="mt-3 flex items-center text-sm text-gray-600">
-                    <Camera className="w-4 h-4 mr-1" />
-                    已上傳 {[record.departurePhoto, record.returnPhoto].filter(Boolean).length} 張照片
-                  </div>
-                )}
               </div>
             ))
           )}
@@ -307,69 +288,48 @@ export default function DashboardPage() {
       {activeTab === 'coordinator' && (
         <div className="space-y-4">
           {filteredCoordinatorData.length === 0 ? (
-            <div className="card text-center py-8">
+            <div className="text-center py-12">
               <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">尚無統整數據記錄</p>
-              <Link href="/coordinator" className="btn-primary mt-4 inline-block">
-                開始記錄
-              </Link>
+              <p className="text-gray-500">尚無統整記錄數據</p>
             </div>
           ) : (
             filteredCoordinatorData.map((record) => (
               <div key={record.id} className="card">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{record.coordinatorName}</h3>
-                    <p className="text-sm text-gray-600 flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {formatDate(record.date)}
-                    </p>
-                    <p className="text-sm text-gray-600 flex items-center">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <BarChart3 className="w-4 h-4 text-green-600 mr-2" />
+                      <span className="font-medium">{record.coordinatorName}</span>
+                      <span className="text-sm text-gray-500 ml-2">{formatDate(record.date)}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600 mb-1">
                       <MapPin className="w-4 h-4 mr-1" />
-                      {record.location}
-                    </p>
+                      <span>{record.location}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Zap className="w-4 h-4 mr-1" />
+                      <span>用電: {record.electricityUsage} kWh</span>
+                    </div>
+                    {record.projectName && (
+                      <div className="mt-2 text-sm text-blue-600">
+                        專案: {record.projectName}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setSelectedRecord(record)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                      className="text-blue-600 hover:text-blue-800"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => deleteCoordinatorRecord(record.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded"
+                      onClick={() => deleteCoordinatorRecord(record.id!)}
+                      className="text-red-600 hover:text-red-800"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {record.electricityUsage && (
-                    <div className="flex items-center">
-                      <Zap className="w-4 h-4 text-yellow-600 mr-2" />
-                      <span>{record.electricityUsage} kWh</span>
-                    </div>
-                  )}
-                  {record.waterWeight && (
-                    <div className="flex items-center">
-                      <Droplets className="w-4 h-4 text-blue-600 mr-2" />
-                      <span>{record.waterWeight} kg</span>
-                    </div>
-                  )}
-                  {record.foodWasteWeight && (
-                    <div className="flex items-center">
-                      <UtensilsCrossed className="w-4 h-4 text-orange-600 mr-2" />
-                      <span>{record.foodWasteWeight} kg</span>
-                    </div>
-                  )}
-                  {record.recycleWeight && (
-                    <div className="flex items-center">
-                      <Recycle className="w-4 h-4 text-green-600 mr-2" />
-                      <span>{record.recycleWeight} kg</span>
-                    </div>
-                  )}
                 </div>
               </div>
             ))
@@ -379,30 +339,32 @@ export default function DashboardPage() {
 
       {/* Detail Modal */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">詳細資料</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {activeTab === 'personal' ? '個人記錄詳情' : '統整記錄詳情'}
+                </h3>
                 <button
                   onClick={() => setSelectedRecord(null)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  ✕
+                  <Eye className="w-5 h-5" />
                 </button>
               </div>
               
-              {'name' in selectedRecord ? (
+              {activeTab === 'personal' ? (
                 // Personal Record
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">姓名</label>
-                    <p className="mt-1">{selectedRecord.name}</p>
+                    <p className="mt-1">{(selectedRecord as PersonalRecord).name}</p>
                   </div>
-                  {(selectedRecord as any).projectName && (
+                  {(selectedRecord as PersonalRecord).projectName && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">所屬專案</label>
-                      <p className="mt-1">{(selectedRecord as any).projectName}</p>
+                      <p className="mt-1">{(selectedRecord as PersonalRecord).projectName}</p>
                     </div>
                   )}
                   <div>
@@ -410,44 +372,54 @@ export default function DashboardPage() {
                     <p className="mt-1">{formatDate(selectedRecord.date)}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">里程數</label>
-                    <p className="mt-1">{selectedRecord.mileage} km</p>
-                  </div>
-                  <div>
                     <label className="text-sm font-medium text-gray-700">出發地</label>
-                    <p className="mt-1">{selectedRecord.startLocation}</p>
+                    <p className="mt-1">{(selectedRecord as PersonalRecord).startLocation}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">目的地</label>
-                    <p className="mt-1">{selectedRecord.endLocation}</p>
+                    <p className="mt-1">{(selectedRecord as PersonalRecord).endLocation}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">里程數</label>
+                    <p className="mt-1">{(selectedRecord as PersonalRecord).mileage} km</p>
                   </div>
                   
-                  {selectedRecord.departurePhoto && (
+                  {/* 照片 */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium text-gray-700">去程照片</label>
-                      <img
-                        src={selectedRecord.departurePhoto}
-                        alt="去程照片"
-                        className="mt-2 w-full h-48 object-cover rounded border"
-                      />
+                      {(selectedRecord as PersonalRecord).departurePhotoUrl ? (
+                        <img 
+                          src={(selectedRecord as PersonalRecord).departurePhotoUrl} 
+                          alt="去程照片" 
+                          className="w-full h-32 object-cover rounded mt-2"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 rounded mt-2 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  
-                  {selectedRecord.returnPhoto && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">回程照片</label>
-                      <img
-                        src={selectedRecord.returnPhoto}
-                        alt="回程照片"
-                        className="mt-2 w-full h-48 object-cover rounded border"
-                      />
+                      {(selectedRecord as PersonalRecord).returnPhotoUrl ? (
+                        <img 
+                          src={(selectedRecord as PersonalRecord).returnPhotoUrl} 
+                          alt="回程照片" 
+                          className="w-full h-32 object-cover rounded mt-2"
+                        />
+                      ) : (
+                        <div className="w-full h-32 bg-gray-100 rounded mt-2 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400" />
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                   
-                  {selectedRecord.notes && (
+                  {(selectedRecord as PersonalRecord).notes && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">備註</label>
-                      <p className="mt-1">{selectedRecord.notes}</p>
+                      <p className="mt-1 text-gray-600">{(selectedRecord as PersonalRecord).notes}</p>
                     </div>
                   )}
                 </div>
@@ -456,12 +428,12 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">統整人員</label>
-                    <p className="mt-1">{selectedRecord.coordinatorName}</p>
+                    <p className="mt-1">{(selectedRecord as CoordinatorRecord).coordinatorName}</p>
                   </div>
-                  {(selectedRecord as any).projectName && (
+                  {(selectedRecord as CoordinatorRecord).projectName && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">所屬專案</label>
-                      <p className="mt-1">{(selectedRecord as any).projectName}</p>
+                      <p className="mt-1">{(selectedRecord as CoordinatorRecord).projectName}</p>
                     </div>
                   )}
                   <div>
@@ -470,86 +442,84 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">地點</label>
-                    <p className="mt-1">{selectedRecord.location}</p>
+                    <p className="mt-1">{(selectedRecord as CoordinatorRecord).location}</p>
                   </div>
                   
                   {/* 電力數據 */}
-                  {selectedRecord.electricityUsage && (
+                  {(selectedRecord as CoordinatorRecord).electricityUsage && (
                     <div className="bg-yellow-50 p-3 rounded">
                       <h4 className="font-medium text-yellow-800 mb-2 flex items-center">
                         <Zap className="w-4 h-4 mr-2" />
                         用電數據
                       </h4>
-                      <p>總用電：{selectedRecord.electricityUsage} kWh</p>
-                      {selectedRecord.electricityStartReading && (
-                        <p>開始讀數：{selectedRecord.electricityStartReading}</p>
+                      <p>總用電：{(selectedRecord as CoordinatorRecord).electricityUsage} kWh</p>
+                      {(selectedRecord as CoordinatorRecord).electricityStartReading && (
+                        <p>開始讀數：{(selectedRecord as CoordinatorRecord).electricityStartReading}</p>
                       )}
-                      {selectedRecord.electricityEndReading && (
-                        <p>結束讀數：{selectedRecord.electricityEndReading}</p>
+                      {(selectedRecord as CoordinatorRecord).electricityEndReading && (
+                        <p>結束讀數：{(selectedRecord as CoordinatorRecord).electricityEndReading}</p>
                       )}
                     </div>
                   )}
                   
                   {/* 飲水數據 */}
-                  {(selectedRecord.waterWeight || selectedRecord.waterBottleCount) && (
+                  {((selectedRecord as CoordinatorRecord).waterWeight || (selectedRecord as CoordinatorRecord).waterBottleCount) && (
                     <div className="bg-blue-50 p-3 rounded">
                       <h4 className="font-medium text-blue-800 mb-2 flex items-center">
                         <Droplets className="w-4 h-4 mr-2" />
                         飲水數據
                       </h4>
-                      {selectedRecord.waterWeight && <p>重量：{selectedRecord.waterWeight} kg</p>}
-                      {selectedRecord.waterBottleCount && <p>瓶數：{selectedRecord.waterBottleCount} 瓶</p>}
-                    </div>
-                  )}
-                  
-                  {/* 餐點數據 */}
-                  {(selectedRecord.foodWasteWeight || selectedRecord.mealCount) && (
-                    <div className="bg-orange-50 p-3 rounded">
-                      <h4 className="font-medium text-orange-800 mb-2 flex items-center">
-                        <UtensilsCrossed className="w-4 h-4 mr-2" />
-                        餐點數據
-                      </h4>
-                      {selectedRecord.foodWasteWeight && <p>廚餘：{selectedRecord.foodWasteWeight} kg</p>}
-                      {selectedRecord.mealCount && <p>用餐人次：{selectedRecord.mealCount}</p>}
-                    </div>
-                  )}
-                  
-                  {/* 回收數據 */}
-                  {(selectedRecord.recycleWeight || selectedRecord.recycleTypes.length > 0) && (
-                    <div className="bg-green-50 p-3 rounded">
-                      <h4 className="font-medium text-green-800 mb-2 flex items-center">
-                        <Recycle className="w-4 h-4 mr-2" />
-                        回收數據
-                      </h4>
-                      {selectedRecord.recycleWeight && <p>重量：{selectedRecord.recycleWeight} kg</p>}
-                      {selectedRecord.recycleTypes.length > 0 && (
-                        <p>類型：{selectedRecord.recycleTypes.join('、')}</p>
+                      {(selectedRecord as CoordinatorRecord).waterWeight && (
+                        <p>飲水重量：{(selectedRecord as CoordinatorRecord).waterWeight} kg</p>
+                      )}
+                      {(selectedRecord as CoordinatorRecord).waterBottleCount && (
+                        <p>瓶數：{(selectedRecord as CoordinatorRecord).waterBottleCount} 瓶</p>
                       )}
                     </div>
                   )}
                   
-                  {selectedRecord.notes && (
+                  {/* 餐點數據 */}
+                  {((selectedRecord as CoordinatorRecord).foodWasteWeight || (selectedRecord as CoordinatorRecord).mealCount) && (
+                    <div className="bg-green-50 p-3 rounded">
+                      <h4 className="font-medium text-green-800 mb-2 flex items-center">
+                        <UtensilsCrossed className="w-4 h-4 mr-2" />
+                        餐點數據
+                      </h4>
+                      {(selectedRecord as CoordinatorRecord).mealCount && (
+                        <p>餐點數：{(selectedRecord as CoordinatorRecord).mealCount} 份</p>
+                      )}
+                      {(selectedRecord as CoordinatorRecord).foodWasteWeight && (
+                        <p>廚餘重量：{(selectedRecord as CoordinatorRecord).foodWasteWeight} kg</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* 回收數據 */}
+                  {((selectedRecord as CoordinatorRecord).recycleWeight || (selectedRecord as CoordinatorRecord).recycleTypes.length > 0) && (
+                    <div className="bg-purple-50 p-3 rounded">
+                      <h4 className="font-medium text-purple-800 mb-2 flex items-center">
+                        <Recycle className="w-4 h-4 mr-2" />
+                        回收數據
+                      </h4>
+                      {(selectedRecord as CoordinatorRecord).recycleWeight && (
+                        <p>回收重量：{(selectedRecord as CoordinatorRecord).recycleWeight} kg</p>
+                      )}
+                      {(selectedRecord as CoordinatorRecord).recycleTypes.length > 0 && (
+                        <p>回收類型：{(selectedRecord as CoordinatorRecord).recycleTypes.join(', ')}</p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {(selectedRecord as CoordinatorRecord).notes && (
                     <div>
                       <label className="text-sm font-medium text-gray-700">備註</label>
-                      <p className="mt-1">{selectedRecord.notes}</p>
+                      <p className="mt-1 text-gray-600">{(selectedRecord as CoordinatorRecord).notes}</p>
                     </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Clear Data Button */}
-      {(personalData.length > 0 || coordinatorData.length > 0) && (
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <button
-            onClick={clearAllData}
-            className="w-full py-3 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
-          >
-            清除所有數據
-          </button>
         </div>
       )}
     </div>

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Zap, Droplets, UtensilsCrossed, Recycle, CheckCircle, AlertCircle, Folder } from 'lucide-react'
+import { ArrowLeft, Zap, Droplets, UtensilsCrossed, Recycle, CheckCircle, AlertCircle, Folder, Camera, Upload, X } from 'lucide-react'
 import { storageAdapter, type CoordinatorRecord } from '@/lib/storage-adapter'
 
 interface CoordinatorData {
@@ -27,6 +27,9 @@ interface CoordinatorData {
   recycleWeight: string
   recycleTypes: string[]
   
+  // 照片數據 (可選)
+  photos: string[]
+  
   notes: string
   projectId: string | null
   projectName: string
@@ -46,15 +49,17 @@ export default function CoordinatorPage() {
     mealCount: '',
     recycleWeight: '',
     recycleTypes: [],
+    photos: [],
     notes: '',
     projectId: null,
     projectName: ''
   })
   
   const [currentProject, setCurrentProject] = useState<any>(null)
-  
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   const recycleOptions = [
     '塑膠瓶', '紙類', '鋁罐', '玻璃', '廢電池', '其他'
@@ -96,36 +101,69 @@ export default function CoordinatorPage() {
     }
   }
 
-  const handleRecycleTypeChange = (type: string, checked: boolean) => {
+  const handleRecycleTypeChange = (type: string) => {
     setFormData(prev => ({
       ...prev,
-      recycleTypes: checked 
-        ? [...prev.recycleTypes, type]
-        : prev.recycleTypes.filter(t => t !== type)
+      recycleTypes: prev.recycleTypes.includes(type)
+        ? prev.recycleTypes.filter(t => t !== type)
+        : [...prev.recycleTypes, type]
     }))
   }
 
-  const validateForm = (): boolean => {
+  const validateForm = () => {
     const newErrors: Record<string, string> = {}
-    
-    if (!formData.coordinatorName.trim()) newErrors.coordinatorName = '請輸入統整人員姓名'
-    if (!formData.location.trim()) newErrors.location = '請輸入拍攝地點'
-    
-    // 驗證數字欄位
-    const numberFields = [
-      'electricityUsage', 'electricityStartReading', 'electricityEndReading',
-      'waterWeight', 'waterBottleCount', 'foodWasteWeight', 'mealCount', 'recycleWeight'
-    ]
-    
-    numberFields.forEach(field => {
-      const value = formData[field as keyof CoordinatorData] as string
-      if (value && isNaN(Number(value))) {
-        newErrors[field] = '請輸入有效的數字'
-      }
-    })
-    
+
+    if (!formData.coordinatorName.trim()) {
+      newErrors.coordinatorName = '統整人員姓名為必填項目'
+    }
+
+    if (!formData.location.trim()) {
+      newErrors.location = '拍攝地點為必填項目'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  // 照片處理函數
+  const handlePhotoUpload = async (files: FileList) => {
+    if (files.length === 0) return
+
+    setUploadingPhotos(true)
+    try {
+      const newPhotos: string[] = []
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        
+        // 轉換為 base64
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onload = (e) => resolve(e.target?.result as string)
+          reader.readAsDataURL(file)
+        })
+        
+        newPhotos.push(base64)
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        photos: [...prev.photos, ...newPhotos]
+      }))
+      
+      console.log('✅ 照片上傳成功:', newPhotos.length, '張照片')
+    } catch (error) {
+      console.error('❌ 照片上傳失敗:', error)
+    } finally {
+      setUploadingPhotos(false)
+    }
+  }
+
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +190,9 @@ export default function CoordinatorPage() {
         recycleTypes: formData.recycleTypes,
         notes: formData.notes,
         projectId: formData.projectId || '',
-        projectName: formData.projectName
+        projectName: formData.projectName,
+        // 添加照片 URL 列表
+        photoUrls: formData.photos
       }
       
       const savedRecord = await storageAdapter.createCoordinatorRecord(recordData)
@@ -179,6 +219,7 @@ export default function CoordinatorPage() {
       mealCount: '',
       recycleWeight: '',
       recycleTypes: [],
+      photos: [],
       notes: '',
       projectId: currentProject?.id || null,
       projectName: currentProject?.name || ''
@@ -189,15 +230,16 @@ export default function CoordinatorPage() {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen p-4 flex items-center justify-center">
-        <div className="card text-center max-w-sm">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">提交成功！</h2>
-          <p className="text-gray-600 mb-6">現場數據已成功記錄</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center">
+          <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">提交成功！</h2>
+          <p className="text-gray-600 mb-6">統整數據已成功記錄</p>
           <div className="space-y-3">
-            <button onClick={resetForm} className="btn-primary w-full">
+            <button
+              onClick={resetForm}
+              className="btn-primary w-full"
+            >
               繼續記錄
             </button>
             <Link href="/" className="btn-secondary w-full block text-center">
@@ -252,49 +294,52 @@ export default function CoordinatorPage() {
             )}
 
             <div>
-              <label className="form-label">統整人員姓名 *</label>
-              <input
-                type="text"
-                name="coordinatorName"
-                value={formData.coordinatorName}
-                onChange={handleInputChange}
-                className={`form-input ${errors.coordinatorName ? 'border-red-500' : ''}`}
-                placeholder="請輸入統整人員姓名"
-              />
-              {errors.coordinatorName && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.coordinatorName}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="form-label">日期 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                日期 *
+              </label>
               <input
                 type="date"
                 name="date"
                 value={formData.date}
                 onChange={handleInputChange}
-                className="form-input"
+                className="input-field"
+                required
               />
             </div>
 
             <div>
-              <label className="form-label">拍攝地點 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                統整人員姓名 *
+              </label>
+              <input
+                type="text"
+                name="coordinatorName"
+                value={formData.coordinatorName}
+                onChange={handleInputChange}
+                className={`input-field ${errors.coordinatorName ? 'border-red-500' : ''}`}
+                placeholder="輸入統整人員姓名"
+                required
+              />
+              {errors.coordinatorName && (
+                <p className="text-red-500 text-sm mt-1">{errors.coordinatorName}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                拍攝地點 *
+              </label>
               <input
                 type="text"
                 name="location"
                 value={formData.location}
                 onChange={handleInputChange}
-                className={`form-input ${errors.location ? 'border-red-500' : ''}`}
-                placeholder="例：攝影棚A、戶外場景等"
+                className={`input-field ${errors.location ? 'border-red-500' : ''}`}
+                placeholder="輸入拍攝地點"
+                required
               />
               {errors.location && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.location}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{errors.location}</p>
               )}
             </div>
           </div>
@@ -302,54 +347,54 @@ export default function CoordinatorPage() {
 
         {/* 用電數據 */}
         <div className="card">
-          <div className="flex items-center mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
             <Zap className="w-5 h-5 text-yellow-600 mr-2" />
-            <h2 className="text-lg font-semibold">用電數據</h2>
-          </div>
+            用電數據
+          </h2>
           
           <div className="space-y-4">
             <div>
-              <label className="form-label">總用電度數 (kWh)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                總用電量 (kWh)
+              </label>
               <input
                 type="number"
+                step="0.1"
                 name="electricityUsage"
                 value={formData.electricityUsage}
                 onChange={handleInputChange}
-                className={`form-input ${errors.electricityUsage ? 'border-red-500' : ''}`}
-                placeholder="例：15.5"
-                step="0.1"
+                className="input-field"
+                placeholder="輸入總用電量"
               />
-              {errors.electricityUsage && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.electricityUsage}
-                </p>
-              )}
             </div>
-
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="form-label">開始讀數</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  開始讀數
+                </label>
                 <input
                   type="number"
+                  step="0.1"
                   name="electricityStartReading"
                   value={formData.electricityStartReading}
                   onChange={handleInputChange}
-                  className={`form-input ${errors.electricityStartReading ? 'border-red-500' : ''}`}
-                  placeholder="例：1000"
-                  step="0.1"
+                  className="input-field"
+                  placeholder="開始讀數"
                 />
               </div>
               <div>
-                <label className="form-label">結束讀數</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  結束讀數
+                </label>
                 <input
                   type="number"
+                  step="0.1"
                   name="electricityEndReading"
                   value={formData.electricityEndReading}
                   onChange={handleInputChange}
-                  className={`form-input ${errors.electricityEndReading ? 'border-red-500' : ''}`}
-                  placeholder="例：1015.5"
-                  step="0.1"
+                  className="input-field"
+                  placeholder="結束讀數"
                 />
               </div>
             </div>
@@ -358,40 +403,37 @@ export default function CoordinatorPage() {
 
         {/* 飲水數據 */}
         <div className="card">
-          <div className="flex items-center mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
             <Droplets className="w-5 h-5 text-blue-600 mr-2" />
-            <h2 className="text-lg font-semibold">飲水數據</h2>
-          </div>
+            飲水數據
+          </h2>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="form-label">飲水重量 (公斤)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                飲水重量 (kg)
+              </label>
               <input
                 type="number"
+                step="0.1"
                 name="waterWeight"
                 value={formData.waterWeight}
                 onChange={handleInputChange}
-                className={`form-input ${errors.waterWeight ? 'border-red-500' : ''}`}
-                placeholder="例：50"
-                step="0.1"
+                className="input-field"
+                placeholder="輸入飲水重量"
               />
-              {errors.waterWeight && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.waterWeight}
-                </p>
-              )}
             </div>
-
             <div>
-              <label className="form-label">瓶裝水數量 (瓶)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                瓶數
+              </label>
               <input
                 type="number"
                 name="waterBottleCount"
                 value={formData.waterBottleCount}
                 onChange={handleInputChange}
-                className={`form-input ${errors.waterBottleCount ? 'border-red-500' : ''}`}
-                placeholder="例：30"
+                className="input-field"
+                placeholder="輸入瓶數"
               />
             </div>
           </div>
@@ -399,40 +441,37 @@ export default function CoordinatorPage() {
 
         {/* 餐點數據 */}
         <div className="card">
-          <div className="flex items-center mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
             <UtensilsCrossed className="w-5 h-5 text-orange-600 mr-2" />
-            <h2 className="text-lg font-semibold">餐點數據</h2>
-          </div>
+            餐點數據
+          </h2>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="form-label">廚餘重量 (公斤)</label>
-              <input
-                type="number"
-                name="foodWasteWeight"
-                value={formData.foodWasteWeight}
-                onChange={handleInputChange}
-                className={`form-input ${errors.foodWasteWeight ? 'border-red-500' : ''}`}
-                placeholder="例：5.2"
-                step="0.1"
-              />
-              {errors.foodWasteWeight && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.foodWasteWeight}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="form-label">用餐人次</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                餐點數量
+              </label>
               <input
                 type="number"
                 name="mealCount"
                 value={formData.mealCount}
                 onChange={handleInputChange}
-                className={`form-input ${errors.mealCount ? 'border-red-500' : ''}`}
-                placeholder="例：25"
+                className="input-field"
+                placeholder="輸入餐點數量"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                廚餘重量 (kg)
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                name="foodWasteWeight"
+                value={formData.foodWasteWeight}
+                onChange={handleInputChange}
+                className="input-field"
+                placeholder="輸入廚餘重量"
               />
             </div>
           </div>
@@ -440,43 +479,41 @@ export default function CoordinatorPage() {
 
         {/* 回收數據 */}
         <div className="card">
-          <div className="flex items-center mb-4">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
             <Recycle className="w-5 h-5 text-green-600 mr-2" />
-            <h2 className="text-lg font-semibold">回收數據</h2>
-          </div>
+            回收數據
+          </h2>
           
           <div className="space-y-4">
             <div>
-              <label className="form-label">回收重量 (公斤)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                回收重量 (kg)
+              </label>
               <input
                 type="number"
+                step="0.1"
                 name="recycleWeight"
                 value={formData.recycleWeight}
                 onChange={handleInputChange}
-                className={`form-input ${errors.recycleWeight ? 'border-red-500' : ''}`}
-                placeholder="例：8.5"
-                step="0.1"
+                className="input-field"
+                placeholder="輸入回收重量"
               />
-              {errors.recycleWeight && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.recycleWeight}
-                </p>
-              )}
             </div>
-
+            
             <div>
-              <label className="form-label">回收類型</label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {recycleOptions.map(option => (
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                回收類型
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {recycleOptions.map((option) => (
                   <label key={option} className="flex items-center">
                     <input
                       type="checkbox"
                       checked={formData.recycleTypes.includes(option)}
-                      onChange={(e) => handleRecycleTypeChange(option, e.target.checked)}
-                      className="mr-2 rounded border-gray-300 text-primary focus:ring-primary"
+                      onChange={() => handleRecycleTypeChange(option)}
+                      className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
                     />
-                    <span className="text-sm text-gray-700">{option}</span>
+                    <span className="ml-2 text-sm text-gray-700">{option}</span>
                   </label>
                 ))}
               </div>
@@ -484,23 +521,90 @@ export default function CoordinatorPage() {
           </div>
         </div>
 
+        {/* 照片上傳 (可選) */}
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
+            <Camera className="w-5 h-5 text-purple-600 mr-2" />
+            現場照片 (可選)
+          </h2>
+          
+          <div className="space-y-4">
+            <div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => e.target.files && handlePhotoUpload(e.target.files)}
+                className="hidden"
+              />
+              
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhotos}
+                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors flex flex-col items-center justify-center text-gray-600 hover:text-purple-600"
+              >
+                <Upload className="w-8 h-8 mb-2" />
+                <span className="text-sm">
+                  {uploadingPhotos ? '上傳中...' : '點擊上傳現場照片'}
+                </span>
+                <span className="text-xs text-gray-500 mt-1">
+                  可選擇多張照片，支援 JPG、PNG 格式
+                </span>
+              </button>
+            </div>
+
+            {/* 照片預覽 */}
+            {formData.photos.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  已上傳照片 ({formData.photos.length} 張)
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {formData.photos.map((photo, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={photo}
+                        alt={`現場照片 ${index + 1}`}
+                        className="w-full h-24 object-cover rounded"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 備註 */}
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">備註</h2>
+          
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
-            rows={3}
-            className="form-input"
-            placeholder="其他補充說明（選填）"
+            rows={4}
+            className="input-field"
+            placeholder="輸入其他需要記錄的資訊..."
           />
         </div>
 
         {/* 提交按鈕 */}
-        <div className="pb-6">
-          <button type="submit" className="btn-primary w-full">
-            提交現場數據
+        <div className="pb-8">
+          <button
+            type="submit"
+            className="w-full btn-primary py-4 text-lg"
+          >
+            提交統整數據
           </button>
         </div>
       </form>
