@@ -1,49 +1,143 @@
-// Google Drive 服務 - 自動上傳照片到指定的 Google Drive 資料夾
+// Google Drive 服務 - 使用 OAuth2 認證自動上傳照片到指定的 Google Drive 資料夾
 // 支援智能資料夾結構和自動檔案命名
+
+// 擴展 Window 介面以支援 gapi 和 Google Identity Services
+declare global {
+  interface Window {
+    gapi: any
+    google: {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config: any) => any
+        }
+      }
+    }
+  }
+}
 
 // Google Drive 配置
 const GOOGLE_DRIVE_CONFIG = {
   // 您的共享資料夾 ID
   rootFolderId: '1ZAJwPDShYNhGRUCM5VIrbqGk8edYmFZl',
-  // Google Drive API 端點
-  apiUrl: 'https://www.googleapis.com/drive/v3/files',
-  uploadUrl: 'https://www.googleapis.com/upload/drive/v3/files'
+  // OAuth2 配置
+  clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  scope: 'https://www.googleapis.com/auth/drive.file',
+  discoveryDoc: 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
 }
+
+// 全域變數來儲存 OAuth2 token 和 gapi 實例
+let accessToken: string | null = null
+let gapi: any = null
+let isInitialized = false
 
 // 檢查是否配置了 Google Drive
 const isGoogleDriveConfigured = () => {
   return !!(
-    process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY &&
+    GOOGLE_DRIVE_CONFIG.clientId &&
     GOOGLE_DRIVE_CONFIG.rootFolderId
   )
 }
 
-// 生成檔案路徑
-const generateFilePath = (
-  projectName: string,
-  recordType: 'personal' | 'coordinator',
-  userName: string,
-  fileName: string,
-  date: string
-) => {
-  const formattedDate = new Date(date).toISOString().split('T')[0]
+// 初始化 Google API 客戶端（使用新的 Google Identity Services）
+const initializeGoogleAPI = async (): Promise<void> => {
+  if (typeof window === 'undefined') return
+  if (isInitialized) return
   
-  if (recordType === 'personal') {
-    return `${projectName}_拍攝數據/個人記錄/${userName}_里程記錄/${formattedDate}_${fileName}`
-  } else {
-    return `${projectName}_拍攝數據/統整員記錄/${formattedDate}_現場數據/${fileName}`
+  return new Promise((resolve, reject) => {
+    // 載入新的 Google Identity Services 腳本
+    const gsiScript = document.createElement('script')
+    gsiScript.src = 'https://accounts.google.com/gsi/client'
+    gsiScript.onload = () => {
+      // 載入 Google API 客戶端
+      const gapiScript = document.createElement('script')
+      gapiScript.src = 'https://apis.google.com/js/api.js'
+      gapiScript.onload = () => {
+        window.gapi.load('client', async () => {
+          try {
+            await window.gapi.client.init({
+              discoveryDocs: [GOOGLE_DRIVE_CONFIG.discoveryDoc]
+            })
+            gapi = window.gapi
+            isInitialized = true
+            console.log('✅ Google API 初始化成功')
+            resolve()
+          } catch (error) {
+            console.error('❌ Google API 初始化失敗:', error)
+            reject(error)
+          }
+        })
+      }
+      gapiScript.onerror = reject
+      document.head.appendChild(gapiScript)
+    }
+    gsiScript.onerror = reject
+    document.head.appendChild(gsiScript)
+  })
+}
+
+// 獲取 OAuth2 token（使用新的 Google Identity Services）
+const getAccessToken = async (): Promise<string> => {
+  if (!gapi) {
+    await initializeGoogleAPI()
   }
+  
+  if (!accessToken) {
+    console.log('🔐 需要用戶授權 Google Drive 存取權限...')
+    
+    accessToken = await new Promise((resolve, reject) => {
+      try {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_DRIVE_CONFIG.clientId,
+          scope: GOOGLE_DRIVE_CONFIG.scope,
+          callback: (response: any) => {
+            if (response.error) {
+              console.error('❌ 用戶授權失敗:', response.error)
+              reject(new Error('用戶拒絕授權或授權失敗'))
+              return
+            }
+            
+            console.log('✅ 獲取 OAuth2 token 成功')
+            resolve(response.access_token)
+          },
+        })
+        
+        tokenClient.requestAccessToken()
+      } catch (error) {
+        console.error('❌ Token 客戶端初始化失敗:', error)
+        reject(error)
+      }
+    })
+  }
+  
+  if (!accessToken) {
+    throw new Error('無法獲取 OAuth2 token')
+  }
+  
+  return accessToken
+}
+
+// 使用 OAuth2 token 進行 API 呼叫
+const apiCall = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  const token = await getAccessToken()
+  
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    ...options.headers
+  }
+  
+  return fetch(url, {
+    ...options,
+    headers
+  })
 }
 
 // 創建資料夾（如果不存在）
 const createFolderIfNotExists = async (folderName: string, parentId: string): Promise<string> => {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY
-  
   try {
     // 檢查資料夾是否已存在
-    const checkUrl = `${GOOGLE_DRIVE_CONFIG.apiUrl}?q=name='${folderName}' and parents='${parentId}' and mimeType='application/vnd.google-apps.folder'&key=${apiKey}`
+    const checkUrl = `https://www.googleapis.com/drive/v3/files?q=name='${folderName}' and parents='${parentId}' and mimeType='application/vnd.google-apps.folder'`
     
-    const checkResponse = await fetch(checkUrl)
+    const checkResponse = await apiCall(checkUrl)
     const checkData = await checkResponse.json()
     
     if (checkData.files && checkData.files.length > 0) {
@@ -52,14 +146,14 @@ const createFolderIfNotExists = async (folderName: string, parentId: string): Pr
     }
     
     // 創建新資料夾
-    const createUrl = `${GOOGLE_DRIVE_CONFIG.apiUrl}?key=${apiKey}`
+    const createUrl = 'https://www.googleapis.com/drive/v3/files'
     const folderMetadata = {
       name: folderName,
       parents: [parentId],
       mimeType: 'application/vnd.google-apps.folder'
     }
     
-    const createResponse = await fetch(createUrl, {
+    const createResponse = await apiCall(createUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -122,10 +216,8 @@ export const uploadPhotoToGoogleDrive = async (
   }
 ): Promise<string> => {
   if (!isGoogleDriveConfigured()) {
-    throw new Error('Google Drive 未配置')
+    throw new Error('Google Drive 未配置，請設定 NEXT_PUBLIC_GOOGLE_CLIENT_ID')
   }
-  
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_DRIVE_API_KEY
   
   try {
     console.log('🔄 正在上傳照片到 Google Drive...')
@@ -156,9 +248,9 @@ export const uploadPhotoToGoogleDrive = async (
     form.append('file', file)
     
     // 4. 上傳檔案
-    const uploadUrl = `${GOOGLE_DRIVE_CONFIG.uploadUrl}?uploadType=multipart&key=${apiKey}`
+    const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
     
-    const response = await fetch(uploadUrl, {
+    const response = await apiCall(uploadUrl, {
       method: 'POST',
       body: form
     })
@@ -188,13 +280,13 @@ export const getGoogleDriveInfo = () => {
       mode: 'google-drive',
       configured: true,
       rootFolderId: GOOGLE_DRIVE_CONFIG.rootFolderId,
-      description: '照片自動上傳到 Google Drive 並智能分類組織'
+      description: '照片自動上傳到 Google Drive 並智能分類組織（需要用戶授權）'
     }
   }
   return {
     mode: 'local',
     configured: false,
-    description: '需要配置 Google Drive API Key'
+    description: '需要配置 Google OAuth2 Client ID'
   }
 }
 

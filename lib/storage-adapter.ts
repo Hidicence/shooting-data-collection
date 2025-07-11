@@ -272,13 +272,23 @@ export const storageAdapter = {
       }
     }
     
-    // 回退到 Firebase Storage
+    // 回退到 Firebase Storage (增加超時處理)
     if (isFirebaseConfigured()) {
       try {
         console.log('🔄 使用 Firebase Storage 上傳照片...')
-        return await uploadPhoto(file, path)
+        
+        // 設置超時 Promise
+        const timeoutPromise = new Promise<string>((_, reject) => {
+          setTimeout(() => reject(new Error('Firebase Storage 上傳超時')), 10000) // 10秒超時
+        })
+        
+        // 競賽 Promise：上傳 vs 超時
+        return await Promise.race([
+          uploadPhoto(file, path),
+          timeoutPromise
+        ])
       } catch (error) {
-        console.warn('Firebase Storage 失敗，使用 Base64:', error)
+        console.warn('Firebase Storage 失敗（可能是權限或網路問題），使用 Base64:', error)
       }
     }
     
