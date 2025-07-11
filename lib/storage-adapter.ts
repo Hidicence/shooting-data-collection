@@ -256,6 +256,7 @@ export const storageAdapter = {
       userName?: string
       date?: string
       photoType?: 'departure' | 'return' | 'site'
+      category?: string // 新增：用於統整員照片分類
     }
   ): Promise<string> => {
     // 優先使用 Google Drive
@@ -265,7 +266,8 @@ export const storageAdapter = {
         return await uploadPhotoToGoogleDrive(file, options.projectName, options.recordType || 'personal', {
           userName: options.userName,
           date: options.date,
-          photoType: options.photoType
+          photoType: options.photoType,
+          category: options.category // 傳遞分類參數
         })
       } catch (error) {
         console.warn('Google Drive 上傳失敗，嘗試 Firebase:', error)

@@ -150,7 +150,7 @@ export default function CoordinatorPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  // 通用照片處理函數
+  // 通用照片處理函數 - 使用智能上傳系統
   const handlePhotoUpload = async (files: FileList, category: DataCategory) => {
     if (files.length === 0) return
 
@@ -160,14 +160,49 @@ export default function CoordinatorPage() {
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         
-        // 轉換為 base64
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload = (e) => resolve(e.target?.result as string)
-          reader.readAsDataURL(file)
-        })
-        
-        newPhotos.push(base64)
+        if (!currentProject) {
+          console.warn('未選擇專案，照片將存儲為 Base64')
+          // 回退到 Base64
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result as string)
+            reader.readAsDataURL(file)
+          })
+          newPhotos.push(base64)
+          continue
+        }
+
+        try {
+          console.log(`🔄 正在上傳 ${category} 照片...`)
+          
+          // 使用智能上傳（優先 Google Drive）
+          const photoUrl = await storageAdapter.uploadPhoto(
+            file,
+            `photos/${currentProject.name}/coordinator/${category}/${Date.now()}.jpg`,
+            {
+              projectName: currentProject.name,
+              recordType: 'coordinator',
+              userName: formData.coordinatorName,
+              date: formData.date,
+              photoType: 'site',
+              category: category // 傳遞分類信息給 Google Drive
+            }
+          )
+          
+          console.log(`✅ ${category} 照片上傳成功`)
+          newPhotos.push(photoUrl)
+          
+        } catch (error) {
+          console.error(`❌ ${category} 照片上傳失敗:`, error)
+          
+          // 回退到 Base64
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (e) => resolve(e.target?.result as string)
+            reader.readAsDataURL(file)
+          })
+          newPhotos.push(base64)
+        }
       }
       
       setFormData(prev => ({
@@ -175,7 +210,7 @@ export default function CoordinatorPage() {
         [`${category}Photos`]: [...(prev[`${category}Photos` as keyof CoordinatorData] as string[]), ...newPhotos]
       }))
       
-      console.log(`✅ ${category} 照片上傳成功:`, newPhotos.length, '張照片')
+      console.log(`✅ ${category} 照片處理完成:`, newPhotos.length, '張照片')
     } catch (error) {
       console.error(`❌ ${category} 照片上傳失敗:`, error)
     }

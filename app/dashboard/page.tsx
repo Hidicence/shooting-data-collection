@@ -162,16 +162,16 @@ export default function DashboardPage() {
   const totalElectricity = filteredCoordinatorData.reduce((sum, record) => sum + parseFloat(record.electricityUsage || '0'), 0)
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 pt-4">
         <div className="flex items-center">
           <Link href="/" className="mr-4">
-            <ArrowLeft className="w-6 h-6 text-gray-600" />
+            <ArrowLeft className="w-6 h-6 text-gray-600 dark:text-gray-400" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">數據管理中心</h1>
-            <p className="text-sm text-gray-600">查看和管理所有收集數據</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">數據管理中心</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">查看和管理所有收集數據</p>
           </div>
         </div>
         <div className="flex space-x-2">
@@ -392,16 +392,16 @@ export default function DashboardPage() {
 
       {/* Detail Modal */}
       {selectedRecord && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {activeTab === 'personal' ? '個人記錄詳情' : '統整記錄詳情'}
                 </h3>
                 <button
                   onClick={() => setSelectedRecord(null)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <Eye className="w-5 h-5" />
                 </button>
@@ -411,36 +411,36 @@ export default function DashboardPage() {
                 // Personal Record
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">姓名</label>
-                    <p className="mt-1">{(selectedRecord as PersonalRecord).name}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">姓名</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as PersonalRecord).name}</p>
                   </div>
                   {(selectedRecord as PersonalRecord).projectName && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">所屬專案</label>
-                      <p className="mt-1">{(selectedRecord as PersonalRecord).projectName}</p>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">所屬專案</label>
+                      <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as PersonalRecord).projectName}</p>
                     </div>
                   )}
                   <div>
-                    <label className="text-sm font-medium text-gray-700">日期</label>
-                    <p className="mt-1">{formatDate(selectedRecord.date)}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">日期</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{formatDate(selectedRecord.date)}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">出發地</label>
-                    <p className="mt-1">{(selectedRecord as PersonalRecord).startLocation}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">出發地</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as PersonalRecord).startLocation}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">目的地</label>
-                    <p className="mt-1">{(selectedRecord as PersonalRecord).endLocation}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">目的地</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as PersonalRecord).endLocation}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">里程數</label>
-                    <p className="mt-1">{(selectedRecord as PersonalRecord).mileage} km</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">里程數</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as PersonalRecord).mileage} km</p>
                   </div>
                   
                   {/* 照片 */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium text-gray-700">去程照片</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">去程照片</label>
                       {(selectedRecord as PersonalRecord).departurePhotoUrl ? (
                         <img 
                           src={(selectedRecord as PersonalRecord).departurePhotoUrl} 
@@ -448,13 +448,13 @@ export default function DashboardPage() {
                           className="w-full h-32 object-cover rounded mt-2"
                         />
                       ) : (
-                        <div className="w-full h-32 bg-gray-100 rounded mt-2 flex items-center justify-center">
-                          <Camera className="w-8 h-8 text-gray-400" />
+                        <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded mt-2 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                         </div>
                       )}
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700">回程照片</label>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">回程照片</label>
                       {(selectedRecord as PersonalRecord).returnPhotoUrl ? (
                         <img 
                           src={(selectedRecord as PersonalRecord).returnPhotoUrl} 
@@ -462,8 +462,8 @@ export default function DashboardPage() {
                           className="w-full h-32 object-cover rounded mt-2"
                         />
                       ) : (
-                        <div className="w-full h-32 bg-gray-100 rounded mt-2 flex items-center justify-center">
-                          <Camera className="w-8 h-8 text-gray-400" />
+                        <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded mt-2 flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                         </div>
                       )}
                     </div>
@@ -471,8 +471,8 @@ export default function DashboardPage() {
                   
                   {(selectedRecord as PersonalRecord).notes && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">備註</label>
-                      <p className="mt-1 text-gray-600">{(selectedRecord as PersonalRecord).notes}</p>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">備註</label>
+                      <p className="mt-1 text-gray-600 dark:text-gray-400">{(selectedRecord as PersonalRecord).notes}</p>
                     </div>
                   )}
                 </div>
@@ -480,93 +480,93 @@ export default function DashboardPage() {
                 // Coordinator Record
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">統整人員</label>
-                    <p className="mt-1">{(selectedRecord as CoordinatorRecord).coordinatorName}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">統整人員</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as CoordinatorRecord).coordinatorName}</p>
                   </div>
                   {(selectedRecord as CoordinatorRecord).projectName && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">所屬專案</label>
-                      <p className="mt-1">{(selectedRecord as CoordinatorRecord).projectName}</p>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">所屬專案</label>
+                      <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as CoordinatorRecord).projectName}</p>
                     </div>
                   )}
                   <div>
-                    <label className="text-sm font-medium text-gray-700">日期</label>
-                    <p className="mt-1">{formatDate(selectedRecord.date)}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">日期</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{formatDate(selectedRecord.date)}</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">地點</label>
-                    <p className="mt-1">{(selectedRecord as CoordinatorRecord).location}</p>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">地點</label>
+                    <p className="mt-1 text-gray-900 dark:text-gray-100">{(selectedRecord as CoordinatorRecord).location}</p>
                   </div>
                   
                   {/* 電力數據 */}
                   {(selectedRecord as CoordinatorRecord).electricityUsage && (
-                    <div className="bg-yellow-50 p-3 rounded">
-                      <h4 className="font-medium text-yellow-800 mb-2 flex items-center">
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded border border-yellow-200 dark:border-yellow-700">
+                      <h4 className="font-medium text-yellow-800 dark:text-yellow-400 mb-2 flex items-center">
                         <Zap className="w-4 h-4 mr-2" />
                         用電數據
                       </h4>
-                      <p>總用電：{(selectedRecord as CoordinatorRecord).electricityUsage} kWh</p>
+                      <p className="text-yellow-700 dark:text-yellow-300">總用電：{(selectedRecord as CoordinatorRecord).electricityUsage} kWh</p>
                       {(selectedRecord as CoordinatorRecord).electricityStartReading && (
-                        <p>開始讀數：{(selectedRecord as CoordinatorRecord).electricityStartReading}</p>
+                        <p className="text-yellow-700 dark:text-yellow-300">開始讀數：{(selectedRecord as CoordinatorRecord).electricityStartReading}</p>
                       )}
                       {(selectedRecord as CoordinatorRecord).electricityEndReading && (
-                        <p>結束讀數：{(selectedRecord as CoordinatorRecord).electricityEndReading}</p>
+                        <p className="text-yellow-700 dark:text-yellow-300">結束讀數：{(selectedRecord as CoordinatorRecord).electricityEndReading}</p>
                       )}
                     </div>
                   )}
                   
                   {/* 飲水數據 */}
                   {((selectedRecord as CoordinatorRecord).waterWeight || (selectedRecord as CoordinatorRecord).waterBottleCount) && (
-                    <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="font-medium text-blue-800 mb-2 flex items-center">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded border border-blue-200 dark:border-blue-700">
+                      <h4 className="font-medium text-blue-800 dark:text-blue-400 mb-2 flex items-center">
                         <Droplets className="w-4 h-4 mr-2" />
                         飲水數據
                       </h4>
                       {(selectedRecord as CoordinatorRecord).waterWeight && (
-                        <p>飲水重量：{(selectedRecord as CoordinatorRecord).waterWeight} kg</p>
+                        <p className="text-blue-700 dark:text-blue-300">飲水重量：{(selectedRecord as CoordinatorRecord).waterWeight} kg</p>
                       )}
                       {(selectedRecord as CoordinatorRecord).waterBottleCount && (
-                        <p>瓶數：{(selectedRecord as CoordinatorRecord).waterBottleCount} 瓶</p>
+                        <p className="text-blue-700 dark:text-blue-300">瓶數：{(selectedRecord as CoordinatorRecord).waterBottleCount} 瓶</p>
                       )}
                     </div>
                   )}
                   
                   {/* 餐點數據 */}
                   {((selectedRecord as CoordinatorRecord).foodWasteWeight || (selectedRecord as CoordinatorRecord).mealCount) && (
-                    <div className="bg-green-50 p-3 rounded">
-                      <h4 className="font-medium text-green-800 mb-2 flex items-center">
+                    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded border border-green-200 dark:border-green-700">
+                      <h4 className="font-medium text-green-800 dark:text-green-400 mb-2 flex items-center">
                         <UtensilsCrossed className="w-4 h-4 mr-2" />
                         餐點數據
                       </h4>
                       {(selectedRecord as CoordinatorRecord).mealCount && (
-                        <p>餐點數：{(selectedRecord as CoordinatorRecord).mealCount} 份</p>
+                        <p className="text-green-700 dark:text-green-300">餐點數：{(selectedRecord as CoordinatorRecord).mealCount} 份</p>
                       )}
                       {(selectedRecord as CoordinatorRecord).foodWasteWeight && (
-                        <p>廚餘重量：{(selectedRecord as CoordinatorRecord).foodWasteWeight} kg</p>
+                        <p className="text-green-700 dark:text-green-300">廚餘重量：{(selectedRecord as CoordinatorRecord).foodWasteWeight} kg</p>
                       )}
                     </div>
                   )}
                   
                   {/* 回收數據 */}
                   {((selectedRecord as CoordinatorRecord).recycleWeight || (selectedRecord as CoordinatorRecord).recycleTypes.length > 0) && (
-                    <div className="bg-purple-50 p-3 rounded">
-                      <h4 className="font-medium text-purple-800 mb-2 flex items-center">
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700">
+                      <h4 className="font-medium text-purple-800 dark:text-purple-400 mb-2 flex items-center">
                         <Recycle className="w-4 h-4 mr-2" />
                         回收數據
                       </h4>
                       {(selectedRecord as CoordinatorRecord).recycleWeight && (
-                        <p>回收重量：{(selectedRecord as CoordinatorRecord).recycleWeight} kg</p>
+                        <p className="text-purple-700 dark:text-purple-300">回收重量：{(selectedRecord as CoordinatorRecord).recycleWeight} kg</p>
                       )}
                       {(selectedRecord as CoordinatorRecord).recycleTypes.length > 0 && (
-                        <p>回收類型：{(selectedRecord as CoordinatorRecord).recycleTypes.join(', ')}</p>
+                        <p className="text-purple-700 dark:text-purple-300">回收類型：{(selectedRecord as CoordinatorRecord).recycleTypes.join(', ')}</p>
                       )}
                     </div>
                   )}
                   
                   {(selectedRecord as CoordinatorRecord).notes && (
                     <div>
-                      <label className="text-sm font-medium text-gray-700">備註</label>
-                      <p className="mt-1 text-gray-600">{(selectedRecord as CoordinatorRecord).notes}</p>
+                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">備註</label>
+                      <p className="mt-1 text-gray-600 dark:text-gray-400">{(selectedRecord as CoordinatorRecord).notes}</p>
                     </div>
                   )}
                 </div>

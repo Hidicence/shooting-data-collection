@@ -175,7 +175,8 @@ const createFolderStructure = async (
   projectName: string,
   recordType: 'personal' | 'coordinator',
   userName?: string,
-  date?: string
+  date?: string,
+  category?: string
 ): Promise<string> => {
   try {
     // 1. 創建專案資料夾
@@ -194,7 +195,21 @@ const createFolderStructure = async (
       // 3. 創建日期資料夾
       const formattedDate = new Date(date).toISOString().split('T')[0]
       const dateFolderName = `${formattedDate}_現場數據`
-      return await createFolderIfNotExists(dateFolderName, recordTypeFolderId)
+      const dateFolderId = await createFolderIfNotExists(dateFolderName, recordTypeFolderId)
+      
+      // 4. 如果有分類，創建分類資料夾（用電、飲水、餐點、回收）
+      if (category) {
+        const categoryMap: Record<string, string> = {
+          'electricity': '用電數據',
+          'water': '飲水數據', 
+          'meal': '餐點數據',
+          'recycle': '回收數據'
+        }
+        const categoryFolderName = categoryMap[category] || category
+        return await createFolderIfNotExists(categoryFolderName, dateFolderId)
+      }
+      
+      return dateFolderId
     }
     
     return recordTypeFolderId
@@ -213,6 +228,7 @@ export const uploadPhotoToGoogleDrive = async (
     userName?: string
     date?: string
     photoType?: 'departure' | 'return' | 'site'
+    category?: string // 新增：用於統整員照片分類
   }
 ): Promise<string> => {
   if (!isGoogleDriveConfigured()) {
@@ -227,7 +243,8 @@ export const uploadPhotoToGoogleDrive = async (
       projectName,
       recordType,
       options.userName,
-      options.date
+      options.date,
+      options.category // 傳遞分類參數
     )
     
     // 2. 生成檔案名稱
