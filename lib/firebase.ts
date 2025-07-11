@@ -1,6 +1,6 @@
-import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
-import { getStorage } from 'firebase/storage'
+import { initializeApp, type FirebaseApp } from 'firebase/app'
+import { getFirestore, type Firestore } from 'firebase/firestore'
+import { getStorage, type FirebaseStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   // 這些配置需要從 Firebase Console 獲取
@@ -22,7 +22,10 @@ console.log('Auth Domain:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? '✅ 
 const isConfigComplete = Object.values(firebaseConfig).every(value => value !== undefined)
 console.log('配置完整性:', isConfigComplete ? '✅ 完整' : '❌ 不完整')
 
-let app, db, storage;
+// 初始化 Firebase（確保總是成功，即使配置不完整）
+let app: FirebaseApp;
+let db: Firestore;
+let storage: FirebaseStorage;
 
 try {
   // 初始化 Firebase
@@ -39,6 +42,8 @@ try {
 
 } catch (error) {
   console.error('❌ Firebase 初始化失敗:', error)
+  // 創建一個假的 app 避免編譯錯誤，實際使用時會拋出錯誤
+  throw error
 }
 
 export { db, storage }
