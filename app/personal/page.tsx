@@ -38,6 +38,14 @@ export default function PersonalPage() {
   
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [uploadProgress, setUploadProgress] = useState<{
+    departure: number
+    return: number
+  }>({ departure: 0, return: 0 })
+  const [isUploading, setIsUploading] = useState<{
+    departure: boolean
+    return: boolean
+  }>({ departure: false, return: false })
   const departureInputRef = useRef<HTMLInputElement>(null)
   const returnInputRef = useRef<HTMLInputElement>(null)
 
@@ -96,16 +104,23 @@ export default function PersonalPage() {
     try {
       console.log(`🔄 正在上傳${type === 'departure' ? '去程' : '回程'}照片...`)
       
-      // 使用智能上傳（優先 Google Drive）
+      // 開始上傳狀態
+      setIsUploading(prev => ({ ...prev, [type]: true }))
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }))
+      
+      // 使用 Google Drive 上傳並顯示進度
       const photoUrl = await storageAdapter.uploadPhoto(
         file,
-        `photos/${currentProject.name}/${formData.name}/${type}/${Date.now()}.jpg`,
+        '', // path 參數不再使用，Google Drive 會根據 options 自動創建結構
         {
           projectName: currentProject.name,
           recordType: 'personal',
           userName: formData.name,
           date: formData.date,
-          photoType: type
+          photoType: type,
+          onProgress: (progress) => {
+            setUploadProgress(prev => ({ ...prev, [type]: progress }))
+          }
         }
       )
       
@@ -118,17 +133,12 @@ export default function PersonalPage() {
       
     } catch (error) {
       console.error(`❌ ${type === 'departure' ? '去程' : '回程'}照片上傳失敗:`, error)
+      alert(`照片上傳失敗：${error instanceof Error ? error.message : '未知錯誤'}`)
       
-      // 回退到 Base64
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result as string
-        setFormData(prev => ({
-          ...prev,
-          [type === 'departure' ? 'departurePhoto' : 'returnPhoto']: result
-        }))
-      }
-      reader.readAsDataURL(file)
+    } finally {
+      // 結束上傳狀態
+      setIsUploading(prev => ({ ...prev, [type]: false }))
+      setUploadProgress(prev => ({ ...prev, [type]: 0 }))
     }
   }
 
@@ -349,9 +359,12 @@ export default function PersonalPage() {
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => departureInputRef.current?.click()}
+                  onClick={() => !isUploading.departure && departureInputRef.current?.click()}
+                  disabled={isUploading.departure}
                   className={`w-full p-4 border-2 border-dashed rounded-lg text-center transition-colors ${
-                    formData.departurePhoto 
+                    isUploading.departure
+                      ? 'border-blue-300 bg-blue-50'
+                      : formData.departurePhoto 
                       ? 'border-green-300 bg-green-50' 
                       : errors.departurePhoto 
                       ? 'border-red-300 bg-red-50' 
@@ -360,8 +373,20 @@ export default function PersonalPage() {
                 >
                   <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-gray-600">
-                    {formData.departurePhoto ? '已上傳去程照片' : '點擊上傳去程里程照片'}
+                    {isUploading.departure 
+                      ? `正在上傳去程照片... ${Math.round(uploadProgress.departure)}%`
+                      : formData.departurePhoto 
+                      ? '已上傳去程照片' 
+                      : '點擊上傳去程里程照片'}
                   </p>
+                  {isUploading.departure && (
+                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress.departure}%` }}
+                      />
+                    </div>
+                  )}
                 </button>
                 
                 <input
@@ -400,9 +425,12 @@ export default function PersonalPage() {
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => returnInputRef.current?.click()}
+                  onClick={() => !isUploading.return && returnInputRef.current?.click()}
+                  disabled={isUploading.return}
                   className={`w-full p-4 border-2 border-dashed rounded-lg text-center transition-colors ${
-                    formData.returnPhoto 
+                    isUploading.return
+                      ? 'border-blue-300 bg-blue-50'
+                      : formData.returnPhoto 
                       ? 'border-green-300 bg-green-50' 
                       : errors.returnPhoto 
                       ? 'border-red-300 bg-red-50' 
@@ -411,8 +439,20 @@ export default function PersonalPage() {
                 >
                   <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-gray-600">
-                    {formData.returnPhoto ? '已上傳回程照片' : '點擊上傳回程里程照片'}
+                    {isUploading.return 
+                      ? `正在上傳回程照片... ${Math.round(uploadProgress.return)}%`
+                      : formData.returnPhoto 
+                      ? '已上傳回程照片' 
+                      : '點擊上傳回程里程照片'}
                   </p>
+                  {isUploading.return && (
+                    <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress.return}%` }}
+                      />
+                    </div>
+                  )}
                 </button>
                 
                 <input

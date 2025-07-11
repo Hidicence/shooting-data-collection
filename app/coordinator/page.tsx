@@ -67,6 +67,18 @@ export default function CoordinatorPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [expandedCards, setExpandedCards] = useState<Set<DataCategory>>(new Set())
+  const [uploadProgress, setUploadProgress] = useState<Record<DataCategory, number>>({
+    electricity: 0,
+    water: 0,
+    meal: 0,
+    recycle: 0
+  })
+  const [isUploading, setIsUploading] = useState<Record<DataCategory, boolean>>({
+    electricity: false,
+    water: false,
+    meal: false,
+    recycle: false
+  })
   
   // 為每個分類創建獨立的文件輸入引用
   const electricityInputRef = useRef<HTMLInputElement>(null)
@@ -150,69 +162,73 @@ export default function CoordinatorPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  // 通用照片處理函數 - 使用智能上傳系統
+  // 通用照片處理函數 - 使用 Google Drive 上傳並顯示進度
   const handlePhotoUpload = async (files: FileList, category: DataCategory) => {
     if (files.length === 0) return
 
+    // 檢查是否有專案
+    if (!currentProject) {
+      alert('請先選擇專案才能上傳照片')
+      return
+    }
+
     try {
+      // 開始上傳狀態
+      setIsUploading(prev => ({ ...prev, [category]: true }))
+      setUploadProgress(prev => ({ ...prev, [category]: 0 }))
+      
       const newPhotos: string[] = []
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
+        const fileProgress = (i / files.length) * 100 // 每個文件的基礎進度
         
-        if (!currentProject) {
-          console.warn('未選擇專案，照片將存儲為 Base64')
-          // 回退到 Base64
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-          newPhotos.push(base64)
-          continue
-        }
-
         try {
-          console.log(`🔄 正在上傳 ${category} 照片...`)
+          console.log(`🔄 正在上傳 ${category} 照片 ${i + 1}/${files.length}...`)
           
-          // 使用智能上傳（優先 Google Drive）
+          // 使用 Google Drive 上傳並顯示進度
           const photoUrl = await storageAdapter.uploadPhoto(
             file,
-            `photos/${currentProject.name}/coordinator/${category}/${Date.now()}.jpg`,
+            '', // path 參數不再使用，Google Drive 會根據 options 自動創建結構
             {
               projectName: currentProject.name,
               recordType: 'coordinator',
               userName: formData.coordinatorName,
               date: formData.date,
               photoType: 'site',
-              category: category // 傳遞分類信息給 Google Drive
+              category: category,
+              onProgress: (progress) => {
+                // 計算總進度：基礎進度 + 當前文件進度
+                const totalProgress = fileProgress + (progress / files.length)
+                setUploadProgress(prev => ({ ...prev, [category]: totalProgress }))
+              }
             }
           )
           
-          console.log(`✅ ${category} 照片上傳成功`)
+          console.log(`✅ ${category} 照片 ${i + 1} 上傳成功`)
           newPhotos.push(photoUrl)
           
         } catch (error) {
-          console.error(`❌ ${category} 照片上傳失敗:`, error)
-          
-          // 回退到 Base64
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onload = (e) => resolve(e.target?.result as string)
-            reader.readAsDataURL(file)
-          })
-          newPhotos.push(base64)
+          console.error(`❌ ${category} 照片 ${i + 1} 上傳失敗:`, error)
+          alert(`照片上傳失敗：${error instanceof Error ? error.message : '未知錯誤'}`)
+          break // 停止上傳其他照片
         }
       }
       
-      setFormData(prev => ({
-        ...prev,
-        [`${category}Photos`]: [...(prev[`${category}Photos` as keyof CoordinatorData] as string[]), ...newPhotos]
-      }))
-      
-      console.log(`✅ ${category} 照片處理完成:`, newPhotos.length, '張照片')
+      if (newPhotos.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          [`${category}Photos`]: [...(prev[`${category}Photos` as keyof CoordinatorData] as string[]), ...newPhotos]
+        }))
+        
+        console.log(`✅ ${category} 照片處理完成:`, newPhotos.length, '張照片')
+      }
     } catch (error) {
       console.error(`❌ ${category} 照片上傳失敗:`, error)
+    } finally {
+      // 結束上傳狀態
+      setIsUploading(prev => ({ ...prev, [category]: false }))
+      setUploadProgress(prev => ({ ...prev, [category]: 0 }))
     }
   }
 
@@ -378,14 +394,31 @@ export default function CoordinatorPage() {
         
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          className={`w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-${color}-400 dark:hover:border-${color}-500 transition-colors flex flex-col items-center justify-center text-gray-600 dark:text-gray-400 hover:text-${color}-600 dark:hover:text-${color}-400`}
+          onClick={() => !isUploading[category] && inputRef.current?.click()}
+          disabled={isUploading[category]}
+          className={`w-full py-3 border-2 border-dashed rounded-lg transition-colors flex flex-col items-center justify-center ${
+            isUploading[category]
+              ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+              : `border-gray-300 dark:border-gray-600 hover:border-${color}-400 dark:hover:border-${color}-500 text-gray-600 dark:text-gray-400 hover:text-${color}-600 dark:hover:text-${color}-400`
+          }`}
         >
           <Upload className="w-6 h-6 mb-2" />
-          <span className="text-sm">點擊上傳照片</span>
+          <span className="text-sm">
+            {isUploading[category] 
+              ? `正在上傳 ${category} 照片... ${Math.round(uploadProgress[category])}%`
+              : '點擊上傳照片'}
+          </span>
           <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             可選擇多張照片，支援 JPG、PNG 格式
           </span>
+          {isUploading[category] && (
+            <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress[category]}%` }}
+              />
+            </div>
+          )}
         </button>
 
         {photos.length > 0 && (

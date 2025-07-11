@@ -1,4 +1,5 @@
-// 存儲適配器 - 自動檢測並使用 Firebase 或本地存儲的無縫切換
+// 存儲適配器 - 專用於 Google Drive 上傳與管理
+// 移除 Firebase 和本地存儲選項，專注於 Google Drive 雲端存儲
 
 import { 
   createProject as createProjectFirebase,
@@ -11,7 +12,6 @@ import {
   createCoordinatorRecord as createCoordinatorRecordFirebase,
   getCoordinatorRecords as getCoordinatorRecordsFirebase,
   deleteCoordinatorRecord as deleteCoordinatorRecordFirebase,
-  uploadPhoto,
   type Project,
   type PersonalRecord,
   type CoordinatorRecord
@@ -246,7 +246,7 @@ export const storageAdapter = {
     return await localStorageAdapter.deleteCoordinatorRecord(recordId)
   },
 
-  // 照片上傳 - 智能選擇最佳上傳方式
+  // 照片上傳 - 只使用 Google Drive
   uploadPhoto: async (
     file: File, 
     path: string,
@@ -256,66 +256,59 @@ export const storageAdapter = {
       userName?: string
       date?: string
       photoType?: 'departure' | 'return' | 'site'
-      category?: string // 新增：用於統整員照片分類
+      category?: string
+      onProgress?: (progress: number) => void // 新增：上傳進度回調
     }
   ): Promise<string> => {
-    // 優先使用 Google Drive
-    if (getGoogleDriveInfo().configured && options?.projectName) {
-      try {
-        console.log('🔄 使用 Google Drive 上傳照片...')
-        return await uploadPhotoToGoogleDrive(file, options.projectName, options.recordType || 'personal', {
-          userName: options.userName,
-          date: options.date,
-          photoType: options.photoType,
-          category: options.category // 傳遞分類參數
-        })
-      } catch (error) {
-        console.warn('Google Drive 上傳失敗，嘗試 Firebase:', error)
-      }
+    // 檢查 Google Drive 配置
+    const googleDriveInfo = getGoogleDriveInfo()
+    if (!googleDriveInfo.configured) {
+      throw new Error('Google Drive 未配置，請確認環境變數 NEXT_PUBLIC_GOOGLE_CLIENT_ID 已設定')
     }
-    
-    // 回退到 Firebase Storage (增加超時處理)
-    if (isFirebaseConfigured()) {
-      try {
-        console.log('🔄 使用 Firebase Storage 上傳照片...')
-        
-        // 設置超時 Promise
-        const timeoutPromise = new Promise<string>((_, reject) => {
-          setTimeout(() => reject(new Error('Firebase Storage 上傳超時')), 10000) // 10秒超時
-        })
-        
-        // 競賽 Promise：上傳 vs 超時
-        return await Promise.race([
-          uploadPhoto(file, path),
-          timeoutPromise
-        ])
-      } catch (error) {
-        console.warn('Firebase Storage 失敗（可能是權限或網路問題），使用 Base64:', error)
-      }
+
+    if (!options?.projectName) {
+      throw new Error('專案名稱為必填項，無法上傳照片')
     }
-    
-    // 最後回退到 Base64 編碼
-    console.log('🔄 使用 Base64 本地存儲照片...')
-    return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onload = (e) => resolve(e.target?.result as string)
-      reader.readAsDataURL(file)
-    })
+
+    try {
+      console.log('🔄 開始上傳照片到 Google Drive...')
+      
+      // 顯示上傳進度
+      if (options.onProgress) {
+        options.onProgress(10) // 開始上傳
+      }
+
+      const photoUrl = await uploadPhotoToGoogleDrive(file, options.projectName, options.recordType || 'personal', {
+        userName: options.userName,
+        date: options.date,
+        photoType: options.photoType,
+        category: options.category,
+        onProgress: options.onProgress // 傳遞進度回調
+      })
+
+      console.log('✅ 照片上傳成功到 Google Drive')
+      return photoUrl
+
+    } catch (error) {
+      console.error('❌ Google Drive 上傳失敗:', error)
+      throw new Error(`Google Drive 上傳失敗: ${error instanceof Error ? error.message : '未知錯誤'}`)
+    }
   },
 
   // 檢查狀態
-  isCloudMode: () => isFirebaseConfigured(),
+  isCloudMode: () => getGoogleDriveInfo().configured,
   
   getStorageInfo: () => {
-    if (isFirebaseConfigured()) {
+    const googleDriveInfo = getGoogleDriveInfo()
+    if (googleDriveInfo.configured) {
       return {
-        mode: 'cloud',
-        description: '雲端同步模式 - 數據即時同步，照片存儲在 Google Cloud'
+        mode: 'google-drive',
+        description: '專用 Google Drive 雲端存儲 - 照片自動上傳並智能分類組織'
       }
     }
     return {
-      mode: 'local',
-      description: '本地存儲模式 - 數據存儲在瀏覽器中'
+      mode: 'not-configured',
+      description: '需要配置 Google Drive OAuth2 Client ID'
     }
   }
 }
