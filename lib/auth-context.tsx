@@ -14,7 +14,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // 簡單的密碼 - 實際使用時可以改成更安全的方案
-const INTERNAL_PASSWORD = '2024film'
+const INTERNAL_PASSWORD = '90575771'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>('public')

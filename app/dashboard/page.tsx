@@ -98,6 +98,50 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url)
   }
 
+  const clearAllData = async () => {
+    if (confirm('確定要清除所有數據嗎？此操作無法復原！\n\n這將刪除：\n• 所有個人記錄\n• 所有統整記錄\n• 所有專案資料')) {
+      try {
+        console.log('🔄 正在清除所有數據...')
+        
+        // 清除個人記錄
+        for (const record of personalData) {
+          if (record.id) {
+            await storageAdapter.deletePersonalRecord(record.id)
+          }
+        }
+        
+        // 清除統整記錄
+        for (const record of coordinatorData) {
+          if (record.id) {
+            await storageAdapter.deleteCoordinatorRecord(record.id)
+          }
+        }
+        
+        // 清除專案
+        for (const project of projects) {
+          if (project.id) {
+            await storageAdapter.deleteProject(project.id)
+          }
+        }
+        
+        // 清除當前專案設定
+        localStorage.removeItem('currentProject')
+        
+        // 重新載入數據
+        setPersonalData([])
+        setCoordinatorData([])
+        setProjects([])
+        setSelectedProject(null)
+        
+        console.log('✅ 所有數據已清除')
+        alert('所有數據已成功清除！')
+      } catch (error) {
+        console.error('❌ 清除數據失敗:', error)
+        alert('清除數據時發生錯誤，請稍後再試')
+      }
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('zh-TW')
   }
@@ -130,13 +174,22 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-600">查看和管理所有收集數據</p>
           </div>
         </div>
-        <button
-          onClick={exportData}
-          className="btn-secondary text-sm py-2 px-4 flex items-center"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          匯出
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={exportData}
+            className="btn-secondary text-sm py-2 px-4 flex items-center"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            匯出
+          </button>
+          <button
+            onClick={clearAllData}
+            className="bg-red-600 text-white text-sm py-2 px-4 rounded-lg hover:bg-red-700 flex items-center"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            清除所有數據
+          </button>
+        </div>
       </div>
 
       {/* Statistics */}

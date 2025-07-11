@@ -18,6 +18,9 @@ import {
   Square
 } from 'lucide-react'
 import { storageAdapter, type Project } from '@/lib/storage-adapter'
+import FormInput from '@/components/FormInput'
+import FormTextarea from '@/components/FormTextarea'
+import FormSelect from '@/components/FormSelect'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -265,145 +268,94 @@ export default function ProjectsPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* 基本資訊 */}
             <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="form-label">專案名稱 *</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className={`form-input ${errors.name ? 'border-red-500' : ''}`}
-                  placeholder="例：電影拍攝專案A"
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.name}
-                  </p>
-                )}
-              </div>
+              <FormInput
+                label="專案名稱"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                error={errors.name}
+                placeholder="例：電影拍攝專案A"
+                required={true}
+              />
 
-              <div>
-                <label className="form-label">專案描述</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={2}
-                  className="form-input"
-                  placeholder="專案簡短描述..."
-                />
-              </div>
+              <FormTextarea
+                label="專案描述"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={2}
+                placeholder="專案簡短描述..."
+              />
 
-              <div>
-                <label className="form-label">拍攝地點 *</label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
+              <FormInput
+                label="拍攝地點"
+                name="location"
+                value={formData.location}
+                onChange={handleInputChange}
+                error={errors.location}
+                placeholder="例：台北市信義區"
+                required={true}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormInput
+                  label="開始日期"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate}
                   onChange={handleInputChange}
-                  className={`form-input ${errors.location ? 'border-red-500' : ''}`}
-                  placeholder="例：台北市信義區"
+                  error={errors.startDate}
+                  required={true}
                 />
-                {errors.location && (
-                  <p className="text-red-500 text-sm mt-1 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-1" />
-                    {errors.location}
-                  </p>
-                )}
+                <FormInput
+                  label="結束日期"
+                  name="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                  error={errors.endDate}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">開始日期 *</label>
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleInputChange}
-                    className={`form-input ${errors.startDate ? 'border-red-500' : ''}`}
-                  />
-                  {errors.startDate && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />
-                      {errors.startDate}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="form-label">結束日期</label>
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleInputChange}
-                    className={`form-input ${errors.endDate ? 'border-red-500' : ''}`}
-                  />
-                  {errors.endDate && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />
-                      {errors.endDate}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">專案狀態</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  >
-                    <option value="planning">規劃中</option>
-                    <option value="active">進行中</option>
-                    <option value="completed">已完成</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">導演 *</label>
-                  <input
-                    type="text"
-                    name="director"
-                    value={formData.director}
-                    onChange={handleInputChange}
-                    className={`form-input ${errors.director ? 'border-red-500' : ''}`}
-                    placeholder="導演姓名"
-                  />
-                  {errors.director && (
-                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />
-                      {errors.director}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label">預算</label>
-                <input
-                  type="text"
-                  name="budget"
-                  value={formData.budget}
+                <FormSelect
+                  label="專案狀態"
+                  name="status"
+                  value={formData.status}
                   onChange={handleInputChange}
-                  className="form-input"
-                  placeholder="例：NT$ 1,000,000"
+                  options={[
+                    { value: 'planning', label: '規劃中' },
+                    { value: 'active', label: '進行中' },
+                    { value: 'completed', label: '已完成' }
+                  ]}
+                />
+                <FormInput
+                  label="導演"
+                  name="director"
+                  value={formData.director}
+                  onChange={handleInputChange}
+                  error={errors.director}
+                  placeholder="導演姓名"
+                  required={true}
                 />
               </div>
 
-              <div>
-                <label className="form-label">備註</label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                  rows={2}
-                  className="form-input"
-                  placeholder="其他備註資訊..."
-                />
-              </div>
+              <FormInput
+                label="預算"
+                name="budget"
+                value={formData.budget}
+                onChange={handleInputChange}
+                placeholder="例：NT$ 1,000,000"
+              />
+
+              <FormTextarea
+                label="備註"
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows={2}
+                placeholder="其他備註資訊..."
+              />
             </div>
 
             <div className="flex space-x-3">

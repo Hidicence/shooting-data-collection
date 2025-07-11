@@ -109,28 +109,36 @@ export default function HomePage() {
           </div>
         </Link>
 
-        {/* 統整人員 - 所有人都可以存取 */}
-        <Link href="/coordinator" className="block">
-          <div className="card hover:shadow-xl transition-shadow cursor-pointer border-2 border-transparent hover:border-primary">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
-                <BarChart3 className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">統整人員</h3>
-                <p className="text-sm text-gray-600">記錄現場整體數據</p>
-                <span className="inline-block text-xs text-green-600 bg-green-100 px-2 py-1 rounded mt-1">
-                  公開存取
-                </span>
-              </div>
+        {/* 統整人員 - 需要內部權限 */}
+        <div 
+          onClick={() => handleInternalAccess('/coordinator')}
+          className="card hover:shadow-xl transition-shadow cursor-pointer border-2 border-transparent hover:border-green-500"
+        >
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+              <BarChart3 className="w-6 h-6 text-green-600" />
             </div>
-            <div className="mt-4 text-sm text-gray-500">
-              ✓ 用電度數記錄<br />
-              ✓ 飲水、餐點、回收重量<br />
-              ✓ 現場照片上傳 (可選)
+            <div className="flex-1">
+              <h3 className="font-semibold text-gray-900 flex items-center">
+                統整人員
+                {!isInternal && <Lock className="w-4 h-4 ml-2 text-orange-500" />}
+              </h3>
+              <p className="text-sm text-gray-600">記錄現場整體數據</p>
+              <span className={`inline-block text-xs px-2 py-1 rounded mt-1 ${
+                isInternal 
+                  ? 'text-green-600 bg-green-100' 
+                  : 'text-orange-600 bg-orange-100'
+              }`}>
+                {isInternal ? '已授權' : '需要登錄'}
+              </span>
             </div>
           </div>
-        </Link>
+          <div className="mt-4 text-sm text-gray-500">
+            ✓ 用電度數記錄<br />
+            ✓ 飲水、餐點、回收重量<br />
+            ✓ 現場照片上傳 (可選)
+          </div>
+        </div>
 
         {/* 專案管理 - 需要內部權限 */}
         <div 

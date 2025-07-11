@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Camera, Upload, CheckCircle, AlertCircle, Folder } from 'lucide-react'
 import { storageAdapter, type PersonalRecord } from '@/lib/storage-adapter'
+import FormInput from '@/components/FormInput'
+import FormTextarea from '@/components/FormTextarea'
 
 interface PersonalData {
   name: string
@@ -261,34 +263,24 @@ export default function PersonalPage() {
               </div>
             )}
 
-            <div>
-              <label className="form-label">姓名 *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className={`form-input ${errors.name ? 'border-red-500' : ''}`}
-                placeholder="請輸入您的姓名"
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.name}
-                </p>
-              )}
-            </div>
+            <FormInput
+              label="姓名"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              error={errors.name}
+              placeholder="請輸入您的姓名"
+              required={true}
+            />
 
-            <div>
-              <label className="form-label">日期 *</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
-                className="form-input"
-              />
-            </div>
+            <FormInput
+              label="日期"
+              name="date"
+              type="date"
+              value={formData.date}
+              onChange={handleInputChange}
+              required={true}
+            />
           </div>
         </div>
 
@@ -297,60 +289,37 @@ export default function PersonalPage() {
           <h2 className="text-lg font-semibold mb-4">行程資訊</h2>
           
           <div className="space-y-4">
-            <div>
-              <label className="form-label">總里程數 (公里) *</label>
-              <input
-                type="number"
-                name="mileage"
-                value={formData.mileage}
-                onChange={handleInputChange}
-                className={`form-input ${errors.mileage ? 'border-red-500' : ''}`}
-                placeholder="例：50"
-                step="0.1"
-              />
-              {errors.mileage && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.mileage}
-                </p>
-              )}
-            </div>
+            <FormInput
+              label="總里程數 (公里)"
+              name="mileage"
+              type="number"
+              value={formData.mileage}
+              onChange={handleInputChange}
+              error={errors.mileage}
+              placeholder="例：50"
+              step="0.1"
+              required={true}
+            />
 
-            <div>
-              <label className="form-label">出發地點 *</label>
-              <input
-                type="text"
-                name="startLocation"
-                value={formData.startLocation}
-                onChange={handleInputChange}
-                className={`form-input ${errors.startLocation ? 'border-red-500' : ''}`}
-                placeholder="例：台北車站"
-              />
-              {errors.startLocation && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.startLocation}
-                </p>
-              )}
-            </div>
+            <FormInput
+              label="出發地點"
+              name="startLocation"
+              value={formData.startLocation}
+              onChange={handleInputChange}
+              error={errors.startLocation}
+              placeholder="例：台北車站"
+              required={true}
+            />
 
-            <div>
-              <label className="form-label">目的地點 *</label>
-              <input
-                type="text"
-                name="endLocation"
-                value={formData.endLocation}
-                onChange={handleInputChange}
-                className={`form-input ${errors.endLocation ? 'border-red-500' : ''}`}
-                placeholder="例：拍攝現場"
-              />
-              {errors.endLocation && (
-                <p className="text-red-500 text-sm mt-1 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {errors.endLocation}
-                </p>
-              )}
-            </div>
+            <FormInput
+              label="目的地點"
+              name="endLocation"
+              value={formData.endLocation}
+              onChange={handleInputChange}
+              error={errors.endLocation}
+              placeholder="例：拍攝現場"
+              required={true}
+            />
           </div>
         </div>
 
@@ -465,13 +434,12 @@ export default function PersonalPage() {
 
         {/* 備註 */}
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">備註</h2>
-          <textarea
+          <FormTextarea
+            label="備註"
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
-            className="form-input"
             placeholder="其他補充說明（選填）"
           />
         </div>
