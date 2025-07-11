@@ -75,16 +75,59 @@ export default function PersonalPage() {
     }
   }
 
-  const handlePhotoUpload = (type: 'departure' | 'return', file: File) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const result = e.target?.result as string
+  const handlePhotoUpload = async (type: 'departure' | 'return', file: File) => {
+    if (!currentProject) {
+      console.warn('未選擇專案，照片將存儲為 Base64')
+      // 回退到 Base64
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setFormData(prev => ({
+          ...prev,
+          [type === 'departure' ? 'departurePhoto' : 'returnPhoto']: result
+        }))
+      }
+      reader.readAsDataURL(file)
+      return
+    }
+
+    try {
+      console.log(`🔄 正在上傳${type === 'departure' ? '去程' : '回程'}照片...`)
+      
+      // 使用智能上傳（優先 Google Drive）
+      const photoUrl = await storageAdapter.uploadPhoto(
+        file,
+        `photos/${currentProject.name}/${formData.name}/${type}/${Date.now()}.jpg`,
+        {
+          projectName: currentProject.name,
+          recordType: 'personal',
+          userName: formData.name,
+          date: formData.date,
+          photoType: type
+        }
+      )
+      
+      console.log(`✅ ${type === 'departure' ? '去程' : '回程'}照片上傳成功`)
+      
       setFormData(prev => ({
         ...prev,
-        [type === 'departure' ? 'departurePhoto' : 'returnPhoto']: result
+        [type === 'departure' ? 'departurePhoto' : 'returnPhoto']: photoUrl
       }))
+      
+    } catch (error) {
+      console.error(`❌ ${type === 'departure' ? '去程' : '回程'}照片上傳失敗:`, error)
+      
+      // 回退到 Base64
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result as string
+        setFormData(prev => ({
+          ...prev,
+          [type === 'departure' ? 'departurePhoto' : 'returnPhoto']: result
+        }))
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
   }
 
   const validateForm = (): boolean => {

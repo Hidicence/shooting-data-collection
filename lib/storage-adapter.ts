@@ -16,6 +16,7 @@ import {
   type PersonalRecord,
   type CoordinatorRecord
 } from './firebase-service'
+import { uploadPhotoToGoogleDrive, getGoogleDriveInfo } from './google-drive-service'
 
 // 檢查是否配置了 Firebase
 const isFirebaseConfigured = () => {
@@ -245,22 +246,44 @@ export const storageAdapter = {
     return await localStorageAdapter.deleteCoordinatorRecord(recordId)
   },
 
-  // 照片上傳
-  uploadPhoto: async (file: File, path: string): Promise<string> => {
+  // 照片上傳 - 智能選擇最佳上傳方式
+  uploadPhoto: async (
+    file: File, 
+    path: string,
+    options?: {
+      projectName?: string
+      recordType?: 'personal' | 'coordinator'
+      userName?: string
+      date?: string
+      photoType?: 'departure' | 'return' | 'site'
+    }
+  ): Promise<string> => {
+    // 優先使用 Google Drive
+    if (getGoogleDriveInfo().configured && options?.projectName) {
+      try {
+        console.log('🔄 使用 Google Drive 上傳照片...')
+        return await uploadPhotoToGoogleDrive(file, options.projectName, options.recordType || 'personal', {
+          userName: options.userName,
+          date: options.date,
+          photoType: options.photoType
+        })
+      } catch (error) {
+        console.warn('Google Drive 上傳失敗，嘗試 Firebase:', error)
+      }
+    }
+    
+    // 回退到 Firebase Storage
     if (isFirebaseConfigured()) {
       try {
+        console.log('🔄 使用 Firebase Storage 上傳照片...')
         return await uploadPhoto(file, path)
       } catch (error) {
         console.warn('Firebase Storage 失敗，使用 Base64:', error)
-        // 回退到 Base64 編碼
-        return new Promise((resolve) => {
-          const reader = new FileReader()
-          reader.onload = (e) => resolve(e.target?.result as string)
-          reader.readAsDataURL(file)
-        })
       }
     }
-    // 使用 Base64 編碼
+    
+    // 最後回退到 Base64 編碼
+    console.log('🔄 使用 Base64 本地存儲照片...')
     return new Promise((resolve) => {
       const reader = new FileReader()
       reader.onload = (e) => resolve(e.target?.result as string)
