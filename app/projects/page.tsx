@@ -479,9 +479,9 @@ export default function ProjectsPage() {
                 </div>
                 
                 <div className="flex flex-col space-y-2 ml-4">
-                  {currentProject !== project.id && (
+                  {currentProject !== project.id && project.id && (
                     <button
-                      onClick={() => setAsCurrentProject(project.id)}
+                      onClick={() => setAsCurrentProject(project.id!)}
                       className="text-blue-600 hover:bg-blue-50 p-2 rounded text-sm"
                     >
                       設為當前
@@ -493,12 +493,14 @@ export default function ProjectsPage() {
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => deleteProject(project.id)}
-                    className="text-red-600 hover:bg-red-50 p-2 rounded"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {project.id && (
+                    <button
+                      onClick={() => deleteProject(project.id!)}
+                      className="text-red-600 hover:bg-red-50 p-2 rounded"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
