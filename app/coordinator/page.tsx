@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Zap, Droplets, UtensilsCrossed, Recycle, CheckCircle, AlertCircle, Folder } from 'lucide-react'
+import { storageAdapter, type CoordinatorRecord } from '@/lib/storage-adapter'
 
 interface CoordinatorData {
   date: string
@@ -27,7 +28,7 @@ interface CoordinatorData {
   recycleTypes: string[]
   
   notes: string
-  projectId: number | null
+  projectId: string | null
   projectName: string
 }
 
@@ -60,20 +61,30 @@ export default function CoordinatorPage() {
   ]
 
   useEffect(() => {
-    // Load current project
-    const currentProjectId = localStorage.getItem('currentProject')
-    if (currentProjectId) {
-      const projects = JSON.parse(localStorage.getItem('projects') || '[]')
-      const project = projects.find((p: any) => p.id === parseInt(currentProjectId))
-      if (project) {
-        setCurrentProject(project)
-        setFormData(prev => ({
-          ...prev,
-          projectId: project.id,
-          projectName: project.name
-        }))
+    // Load current project using storage adapter
+    const loadCurrentProject = async () => {
+      const currentProjectId = localStorage.getItem('currentProject')
+      if (currentProjectId) {
+        try {
+          console.log('🔄 正在載入當前專案...')
+          const projects = await storageAdapter.getProjects()
+          const project = projects.find((p: any) => p.id === currentProjectId)
+          if (project) {
+            console.log('✅ 當前專案載入成功:', project.name)
+            setCurrentProject(project)
+            setFormData(prev => ({
+              ...prev,
+              projectId: project.id || null,
+              projectName: project.name
+            }))
+          }
+        } catch (error) {
+          console.error('❌ 載入當前專案失敗:', error)
+        }
       }
     }
+    
+    loadCurrentProject()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -117,22 +128,41 @@ export default function CoordinatorPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!validateForm()) return
     
-    // Save to localStorage
-    const existingData = JSON.parse(localStorage.getItem('coordinatorData') || '[]')
-    const newEntry = {
-      ...formData,
-      id: Date.now(),
-      timestamp: new Date().toISOString()
+    try {
+      console.log('🔄 正在保存統整員記錄...')
+      
+      // 準備 CoordinatorRecord 數據
+      const recordData: Omit<CoordinatorRecord, 'id' | 'createdAt'> = {
+        date: formData.date,
+        coordinatorName: formData.coordinatorName,
+        location: formData.location,
+        electricityUsage: formData.electricityUsage,
+        electricityStartReading: formData.electricityStartReading,
+        electricityEndReading: formData.electricityEndReading,
+        waterWeight: formData.waterWeight,
+        waterBottleCount: formData.waterBottleCount,
+        foodWasteWeight: formData.foodWasteWeight,
+        mealCount: formData.mealCount,
+        recycleWeight: formData.recycleWeight,
+        recycleTypes: formData.recycleTypes,
+        notes: formData.notes,
+        projectId: formData.projectId || '',
+        projectName: formData.projectName
+      }
+      
+      const savedRecord = await storageAdapter.createCoordinatorRecord(recordData)
+      console.log('✅ 統整員記錄保存成功:', savedRecord.id)
+      
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error('❌ 統整員記錄保存失敗:', error)
+      // 可以在這裡顯示錯誤訊息給用戶
     }
-    existingData.push(newEntry)
-    localStorage.setItem('coordinatorData', JSON.stringify(existingData))
-    
-    setIsSubmitted(true)
   }
 
   const resetForm = () => {

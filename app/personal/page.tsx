@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Camera, Upload, CheckCircle, AlertCircle, Folder } from 'lucide-react'
+import { storageAdapter, type PersonalRecord } from '@/lib/storage-adapter'
 
 interface PersonalData {
   name: string
@@ -13,7 +14,7 @@ interface PersonalData {
   departurePhoto: string | null
   returnPhoto: string | null
   notes: string
-  projectId: number | null
+  projectId: string | null
   projectName: string
 }
 
@@ -39,20 +40,30 @@ export default function PersonalPage() {
   const returnInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Load current project
-    const currentProjectId = localStorage.getItem('currentProject')
-    if (currentProjectId) {
-      const projects = JSON.parse(localStorage.getItem('projects') || '[]')
-      const project = projects.find((p: any) => p.id === parseInt(currentProjectId))
-      if (project) {
-        setCurrentProject(project)
-        setFormData(prev => ({
-          ...prev,
-          projectId: project.id,
-          projectName: project.name
-        }))
+    // Load current project using storage adapter
+    const loadCurrentProject = async () => {
+      const currentProjectId = localStorage.getItem('currentProject')
+      if (currentProjectId) {
+        try {
+          console.log('🔄 正在載入當前專案...')
+          const projects = await storageAdapter.getProjects()
+          const project = projects.find((p: any) => p.id === currentProjectId)
+          if (project) {
+            console.log('✅ 當前專案載入成功:', project.name)
+            setCurrentProject(project)
+            setFormData(prev => ({
+              ...prev,
+              projectId: project.id || null,
+              projectName: project.name
+            }))
+          }
+        } catch (error) {
+          console.error('❌ 載入當前專案失敗:', error)
+        }
       }
     }
+    
+    loadCurrentProject()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -94,22 +105,36 @@ export default function PersonalPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!validateForm()) return
     
-    // Save to localStorage
-    const existingData = JSON.parse(localStorage.getItem('personalData') || '[]')
-    const newEntry = {
-      ...formData,
-      id: Date.now(),
-      timestamp: new Date().toISOString()
+    try {
+      console.log('🔄 正在保存個人記錄...')
+      
+      // 準備 PersonalRecord 數據
+      const recordData: Omit<PersonalRecord, 'id' | 'createdAt'> = {
+        name: formData.name,
+        date: formData.date,
+        mileage: formData.mileage,
+        startLocation: formData.startLocation,
+        endLocation: formData.endLocation,
+        departurePhotoUrl: formData.departurePhoto || '',
+        returnPhotoUrl: formData.returnPhoto || '',
+        notes: formData.notes,
+        projectId: formData.projectId || '',
+        projectName: formData.projectName
+      }
+      
+      const savedRecord = await storageAdapter.createPersonalRecord(recordData)
+      console.log('✅ 個人記錄保存成功:', savedRecord.id)
+      
+      setIsSubmitted(true)
+    } catch (error) {
+      console.error('❌ 個人記錄保存失敗:', error)
+      // 可以在這裡顯示錯誤訊息給用戶
     }
-    existingData.push(newEntry)
-    localStorage.setItem('personalData', JSON.stringify(existingData))
-    
-    setIsSubmitted(true)
   }
 
   const resetForm = () => {
