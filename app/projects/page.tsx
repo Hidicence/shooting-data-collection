@@ -17,26 +17,13 @@ import {
   Pause,
   Square
 } from 'lucide-react'
-
-interface Project {
-  id: number
-  name: string
-  description: string
-  location: string
-  startDate: string
-  endDate: string
-  status: 'planning' | 'active' | 'completed'
-  director: string
-  budget: string
-  notes: string
-  createdAt: string
-}
+import { storageAdapter, type Project } from '@/lib/storage-adapter'
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
-  const [currentProject, setCurrentProject] = useState<number | null>(null)
+  const [currentProject, setCurrentProject] = useState<string | null>(null)
   
   const [formData, setFormData] = useState<Omit<Project, 'id' | 'createdAt'>>({
     name: '',
@@ -53,14 +40,24 @@ export default function ProjectsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    // Load projects from localStorage
-    const savedProjects = JSON.parse(localStorage.getItem('projects') || '[]')
-    const savedCurrentProject = localStorage.getItem('currentProject')
-    
-    setProjects(savedProjects)
-    if (savedCurrentProject) {
-      setCurrentProject(parseInt(savedCurrentProject))
+    // Load projects using storage adapter
+    const loadProjects = async () => {
+      console.log('🔄 正在載入專案...')
+      try {
+        const savedProjects = await storageAdapter.getProjects()
+        console.log('✅ 專案載入成功:', savedProjects.length, '個專案')
+        setProjects(savedProjects)
+        
+        const savedCurrentProject = localStorage.getItem('currentProject')
+        if (savedCurrentProject) {
+          setCurrentProject(savedCurrentProject)
+        }
+      } catch (error) {
+        console.error('❌ 載入專案失敗:', error)
+      }
     }
+    
+    loadProjects()
   }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -88,37 +85,42 @@ export default function ProjectsPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!validateForm()) return
     
-    const newProject: Project = {
-      ...formData,
-      id: editingProject ? editingProject.id : Date.now(),
-      createdAt: editingProject ? editingProject.createdAt : new Date().toISOString()
+    try {
+      console.log('🔄 正在保存專案...')
+      
+      if (editingProject) {
+        // Update existing project
+        await storageAdapter.updateProject(editingProject.id!, formData)
+        console.log('✅ 專案更新成功')
+        
+        // Reload projects to get updated data
+        const updatedProjects = await storageAdapter.getProjects()
+        setProjects(updatedProjects)
+      } else {
+        // Create new project
+        const newProject = await storageAdapter.createProject(formData)
+        console.log('✅ 專案創建成功:', newProject.id)
+        
+        // Reload projects to get latest data
+        const updatedProjects = await storageAdapter.getProjects()
+        setProjects(updatedProjects)
+        
+        // If this is the first project or no current project is set, make it current
+        if (!currentProject || projects.length === 0) {
+          setCurrentProject(newProject.id!)
+          localStorage.setItem('currentProject', newProject.id!)
+        }
+      }
+      
+      resetForm()
+    } catch (error) {
+      console.error('❌ 專案保存失敗:', error)
     }
-    
-    let updatedProjects: Project[]
-    
-    if (editingProject) {
-      // Update existing project
-      updatedProjects = projects.map(p => p.id === editingProject.id ? newProject : p)
-    } else {
-      // Create new project
-      updatedProjects = [...projects, newProject]
-    }
-    
-    setProjects(updatedProjects)
-    localStorage.setItem('projects', JSON.stringify(updatedProjects))
-    
-    // If this is the first project or no current project is set, make it current
-    if (!currentProject || projects.length === 0) {
-      setCurrentProject(newProject.id)
-      localStorage.setItem('currentProject', newProject.id.toString())
-    }
-    
-    resetForm()
   }
 
   const resetForm = () => {
@@ -138,23 +140,31 @@ export default function ProjectsPage() {
     setErrors({})
   }
 
-  const deleteProject = (id: number) => {
+  const deleteProject = async (id: string) => {
     if (confirm('確定要刪除此專案嗎？此操作無法復原。')) {
-      const updatedProjects = projects.filter(p => p.id !== id)
-      setProjects(updatedProjects)
-      localStorage.setItem('projects', JSON.stringify(updatedProjects))
-      
-      // If deleted project was current, clear current project
-      if (currentProject === id) {
-        setCurrentProject(null)
-        localStorage.removeItem('currentProject')
+      try {
+        console.log('🔄 正在刪除專案...')
+        await storageAdapter.deleteProject(id)
+        console.log('✅ 專案刪除成功')
+        
+        // Reload projects
+        const updatedProjects = await storageAdapter.getProjects()
+        setProjects(updatedProjects)
+        
+        // If deleted project was current, clear current project
+        if (currentProject === id) {
+          setCurrentProject(null)
+          localStorage.removeItem('currentProject')
+        }
+      } catch (error) {
+        console.error('❌ 刪除專案失敗:', error)
       }
     }
   }
 
-  const setAsCurrentProject = (id: number) => {
+  const setAsCurrentProject = (id: string) => {
     setCurrentProject(id)
-    localStorage.setItem('currentProject', id.toString())
+    localStorage.setItem('currentProject', id)
   }
 
   const startEditing = (project: Project) => {

@@ -12,13 +12,34 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 }
 
-// 初始化 Firebase
-const app = initializeApp(firebaseConfig)
+// 調試輸出
+console.log('🔥 Firebase 配置檢查:')
+console.log('API Key:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? '✅ 已載入' : '❌ 未載入')
+console.log('Project ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✅ 已載入' : '❌ 未載入')
+console.log('Auth Domain:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? '✅ 已載入' : '❌ 未載入')
 
-// 初始化 Firestore 數據庫
-export const db = getFirestore(app)
+// 檢查所有必要配置是否存在
+const isConfigComplete = Object.values(firebaseConfig).every(value => value !== undefined)
+console.log('配置完整性:', isConfigComplete ? '✅ 完整' : '❌ 不完整')
 
-// 初始化 Storage（用於照片存儲）
-export const storage = getStorage(app)
+let app, db, storage;
 
+try {
+  // 初始化 Firebase
+  app = initializeApp(firebaseConfig)
+  console.log('✅ Firebase 應用初始化成功')
+
+  // 初始化 Firestore 數據庫
+  db = getFirestore(app)
+  console.log('✅ Firestore 初始化成功')
+
+  // 初始化 Storage（用於照片存儲）
+  storage = getStorage(app)
+  console.log('✅ Storage 初始化成功')
+
+} catch (error) {
+  console.error('❌ Firebase 初始化失敗:', error)
+}
+
+export { db, storage }
 export default app 
