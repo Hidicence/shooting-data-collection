@@ -226,7 +226,22 @@ export default function CoordinatorPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    console.log('🔄 統整員表單提交開始...')
+    console.log('表單數據:', formData)
+    
+    const isValid = validateForm()
+    console.log('表單驗證結果:', isValid)
+    console.log('錯誤列表:', errors)
+    
+    if (!isValid) {
+      console.log('❌ 表單驗證失敗，無法提交')
+      // 在手機上顯示第一個錯誤
+      const firstError = Object.values(errors)[0]
+      if (firstError) {
+        alert(`表單驗證失敗：${firstError}`)
+      }
+      return
+    }
     
     try {
       console.log('🔄 正在保存統整員記錄...')
@@ -667,15 +682,19 @@ export default function CoordinatorPage() {
           />
         </div>
 
-        {/* 提交按鈕 */}
-        <div className="pb-8">
+        {/* 提交按鈕 - 手機端優化 */}
+        <div className="pb-8 pt-4">
           <button
             type="submit"
-            className="w-full btn-primary py-4 text-lg"
+            className="w-full btn-primary py-4 text-lg font-semibold shadow-xl sticky bottom-4 z-10"
+            style={{ minHeight: '56px' }}
           >
             提交統整數據
           </button>
         </div>
+        
+        {/* 手機端額外底部空間，避免虛擬鍵盤遮擋 */}
+        <div className="h-20 md:h-0"></div>
       </form>
     </div>
   )

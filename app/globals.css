@@ -18,11 +18,19 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md;
+    @apply bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md;
+    /* 手機端觸控優化 */
+    min-height: 44px; /* Apple 建議的最小觸控目標 */
+    touch-action: manipulation; /* 優化觸控響應 */
+    -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊高亮 */
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors;
+    @apply bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors;
+    /* 手機端觸控優化 */
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
   
   .dark .btn-secondary {

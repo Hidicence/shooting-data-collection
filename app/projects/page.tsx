@@ -91,7 +91,22 @@ export default function ProjectsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!validateForm()) return
+    console.log('🔄 專案表單提交開始...')
+    console.log('表單數據:', formData)
+    
+    const isValid = validateForm()
+    console.log('表單驗證結果:', isValid)
+    console.log('錯誤列表:', errors)
+    
+    if (!isValid) {
+      console.log('❌ 表單驗證失敗，無法提交')
+      // 在手機上顯示第一個錯誤
+      const firstError = Object.values(errors)[0]
+      if (firstError) {
+        alert(`表單驗證失敗：${firstError}`)
+      }
+      return
+    }
     
     try {
       console.log('🔄 正在保存專案...')
@@ -358,18 +373,29 @@ export default function ProjectsPage() {
               />
             </div>
 
-            <div className="flex space-x-3">
-              <button type="submit" className="btn-primary flex-1">
-                {editingProject ? '更新專案' : '創建專案'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="btn-secondary"
-              >
-                取消
-              </button>
+            {/* 手機端優化的提交按鈕區域 */}
+            <div className="pt-4 pb-4">
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+                <button 
+                  type="submit" 
+                  className="btn-primary flex-1 py-4 text-lg font-semibold shadow-xl"
+                  style={{ minHeight: '56px' }}
+                >
+                  {editingProject ? '更新專案' : '創建專案'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="btn-secondary py-4 px-6 text-lg"
+                  style={{ minHeight: '56px' }}
+                >
+                  取消
+                </button>
+              </div>
             </div>
+            
+            {/* 手機端額外底部空間 */}
+            <div className="h-16 md:h-0"></div>
           </form>
         </div>
       )}
