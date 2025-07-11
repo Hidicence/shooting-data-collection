@@ -13,7 +13,7 @@ const firebaseConfig = {
 }
 
 // 調試輸出
-console.log('🔥 Firebase 配置檢查:')
+console.log('🔥 Firebase 配置檢查 (v2):')
 console.log('API Key:', process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? '✅ 已載入' : '❌ 未載入')
 console.log('Project ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✅ 已載入' : '❌ 未載入')
 console.log('Auth Domain:', process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? '✅ 已載入' : '❌ 未載入')
