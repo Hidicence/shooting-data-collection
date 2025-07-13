@@ -1,0 +1,323 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900 transition-colors duration-300;
+  }
+  
+  .dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md;
+    /* 手機端觸控優化 */
+    min-height: 44px; /* Apple 建議的最小觸控目標 */
+    touch-action: manipulation; /* 優化觸控響應 */
+    -webkit-tap-highlight-color: transparent; /* 移除 iOS 點擊高亮 */
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 active:bg-gray-400 transition-colors;
+    /* 手機端觸控優化 */
+    min-height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .dark .btn-secondary {
+    @apply bg-gray-700 text-gray-200 hover:bg-gray-600;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100 transition-colors duration-300;
+  }
+  
+  .dark .card {
+    @apply bg-gray-800 border-gray-700 shadow-xl;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-white text-gray-900 transition-colors duration-300;
+  }
+  
+  .dark .input-field {
+    @apply bg-gray-700 border-gray-600 text-gray-100 focus:border-primary;
+  }
+  
+  .form-input {
+    @apply input-field;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+  
+  .dark .form-label {
+    @apply text-gray-300;
+  }
+  
+  /* 暗色主題下的文字顏色 */
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    @apply text-gray-100;
+  }
+  
+  .dark p {
+    @apply text-gray-200;
+  }
+  
+  /* 暗色主題下的連結 */
+  .dark a {
+    @apply text-blue-400 hover:text-blue-300;
+  }
+  
+  /* 暗色主題下的通用文字顏色改善 */
+  .dark .text-gray-600 {
+    color: #d1d5db; /* gray-300 */
+  }
+  
+  .dark .text-gray-700 {
+    color: #e5e7eb; /* gray-200 */
+  }
+  
+  .dark .text-gray-800 {
+    color: #f3f4f6; /* gray-100 */
+  }
+  
+  .dark .text-gray-900 {
+    color: #ffffff; /* white */
+  }
+  
+  .dark .text-gray-500 {
+    color: #9ca3af; /* gray-400 */
+  }
+  
+  .dark .text-gray-400 {
+    color: #d1d5db; /* gray-300 */
+  }
+  
+  /* 暗色主題下的特殊背景 */
+  .dark .bg-blue-50 {
+    @apply bg-blue-900/30;
+  }
+  
+  .dark .bg-green-50 {
+    @apply bg-green-900/30;
+  }
+  
+  .dark .bg-orange-50 {
+    @apply bg-orange-900/30;
+  }
+  
+  .dark .bg-purple-50 {
+    @apply bg-purple-900/30;
+  }
+  
+  .dark .bg-red-50 {
+    @apply bg-red-900/30;
+  }
+  
+  .dark .bg-yellow-50 {
+    @apply bg-yellow-900/30;
+  }
+  
+  /* 暗色主題下的邊框顏色 */
+  .dark .border-blue-200 {
+    @apply border-blue-700;
+  }
+  
+  .dark .border-green-200 {
+    @apply border-green-700;
+  }
+  
+  .dark .border-orange-200 {
+    @apply border-orange-700;
+  }
+  
+  .dark .border-purple-200 {
+    @apply border-purple-700;
+  }
+  
+  .dark .border-red-200 {
+    @apply border-red-700;
+  }
+  
+  .dark .border-yellow-200 {
+    @apply border-yellow-700;
+  }
+  
+  /* 暗色主題下的文字顏色調整 */
+  .dark .text-blue-900 {
+    @apply text-blue-200;
+  }
+  
+  .dark .text-green-900 {
+    @apply text-green-200;
+  }
+  
+  .dark .text-orange-900 {
+    @apply text-orange-200;
+  }
+  
+  .dark .text-purple-900 {
+    @apply text-purple-200;
+  }
+  
+  .dark .text-red-900 {
+    @apply text-red-200;
+  }
+  
+  .dark .text-yellow-900 {
+    @apply text-yellow-200;
+  }
+  
+  .dark .text-blue-800 {
+    @apply text-blue-300;
+  }
+  
+  .dark .text-green-800 {
+    @apply text-green-300;
+  }
+  
+  .dark .text-orange-800 {
+    @apply text-orange-300;
+  }
+  
+  .dark .text-purple-800 {
+    @apply text-purple-300;
+  }
+  
+  .dark .text-red-800 {
+    @apply text-red-300;
+  }
+  
+  .dark .text-yellow-800 {
+    @apply text-yellow-300;
+  }
+  
+  .dark .text-blue-700 {
+    @apply text-blue-400;
+  }
+  
+  .dark .text-green-700 {
+    @apply text-green-400;
+  }
+  
+  .dark .text-orange-700 {
+    @apply text-orange-400;
+  }
+  
+  .dark .text-purple-700 {
+    @apply text-purple-400;
+  }
+  
+  .dark .text-red-700 {
+    @apply text-red-400;
+  }
+  
+  .dark .text-yellow-700 {
+    @apply text-yellow-400;
+  }
+  
+  /* 暗色主題下的狀態標籤和徽章 */
+  .dark .bg-green-100 {
+    background-color: rgba(34, 197, 94, 0.2); /* green-800/40 */
+  }
+  
+  .dark .bg-orange-100 {
+    background-color: rgba(251, 146, 60, 0.2); /* orange-800/40 */
+  }
+  
+  .dark .bg-blue-100 {
+    background-color: rgba(96, 165, 250, 0.2); /* blue-800/40 */
+  }
+  
+  .dark .bg-purple-100 {
+    background-color: rgba(167, 139, 250, 0.2); /* purple-800/40 */
+  }
+  
+  .dark .bg-red-100 {
+    background-color: rgba(248, 113, 113, 0.2); /* red-800/40 */
+  }
+  
+  .dark .bg-yellow-100 {
+    background-color: rgba(250, 204, 21, 0.2); /* yellow-800/40 */
+  }
+  
+  /* 暗色主題下的狀態文字顏色 */
+  .dark .text-green-600 {
+    color: #4ade80; /* green-400 */
+  }
+  
+  .dark .text-orange-600 {
+    color: #fb923c; /* orange-400 */
+  }
+  
+  .dark .text-blue-600 {
+    color: #60a5fa; /* blue-400 */
+  }
+  
+  .dark .text-purple-600 {
+    color: #a78bfa; /* purple-400 */
+  }
+  
+  .dark .text-red-600 {
+    color: #f87171; /* red-400 */
+  }
+  
+  .dark .text-yellow-600 {
+    color: #facc15; /* yellow-400 */
+  }
+  
+  /* 暗色主題下的表單元素改善 */
+  .dark select {
+    background-color: #374151; /* gray-700 */
+    border-color: #4b5563; /* gray-600 */
+    color: #f3f4f6; /* gray-100 */
+  }
+  
+  .dark option {
+    background-color: #374151; /* gray-700 */
+    color: #f3f4f6; /* gray-100 */
+  }
+  
+  .dark textarea {
+    background-color: #374151; /* gray-700 */
+    border-color: #4b5563; /* gray-600 */
+    color: #f3f4f6; /* gray-100 */
+  }
+  
+  /* 暗色主題下的懸停效果改善 */
+  .dark .hover\\:bg-blue-50:hover {
+    background-color: rgba(96, 165, 250, 0.3); /* blue-800/30 */
+  }
+  
+  .dark .hover\\:bg-red-50:hover {
+    background-color: rgba(248, 113, 113, 0.3); /* red-800/30 */
+  }
+  
+  .dark .hover\\:text-blue-800:hover {
+    color: #93c5fd; /* blue-300 */
+  }
+  
+  .dark .hover\\:text-red-800:hover {
+    color: #fca5a5; /* red-300 */
+  }
+  
+  /* 暗色主題下的邊框樣式改善 */
+  .dark .border-dashed {
+    border-color: #4b5563; /* gray-600 */
+  }
+  
+  .dark .hover\\:border-purple-400:hover {
+    border-color: #8b5cf6; /* purple-500 */
+  }
+} 
