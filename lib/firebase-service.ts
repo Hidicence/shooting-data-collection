@@ -13,6 +13,14 @@ import {
 } from 'firebase/firestore'
 import { db } from './firebase'
 
+// 檢查 Firestore 是否可用
+const checkFirestore = () => {
+  if (!db) {
+    throw new Error('Firebase 未初始化，請檢查 Firebase 配置')
+  }
+  return db
+}
+
 // 數據類型定義
 export interface Project {
   id?: string
@@ -68,7 +76,8 @@ export interface CoordinatorRecord {
 
 export const createProject = async (projectData: Omit<Project, 'id' | 'createdAt'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'projects'), {
+    const firestore = checkFirestore()
+    const docRef = await addDoc(collection(firestore, 'projects'), {
       ...projectData,
       createdAt: Timestamp.now()
     })
@@ -81,7 +90,8 @@ export const createProject = async (projectData: Omit<Project, 'id' | 'createdAt
 
 export const getProjects = async (): Promise<Project[]> => {
   try {
-    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'))
+    const firestore = checkFirestore()
+    const q = query(collection(firestore, 'projects'), orderBy('createdAt', 'desc'))
     const querySnapshot = await getDocs(q)
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
@@ -95,7 +105,8 @@ export const getProjects = async (): Promise<Project[]> => {
 
 export const updateProject = async (projectId: string, projectData: Partial<Project>) => {
   try {
-    const projectRef = doc(db, 'projects', projectId)
+    const firestore = checkFirestore()
+    const projectRef = doc(firestore, 'projects', projectId)
     await updateDoc(projectRef, projectData)
     return true
   } catch (error) {
@@ -106,7 +117,9 @@ export const updateProject = async (projectId: string, projectData: Partial<Proj
 
 export const deleteProject = async (projectId: string) => {
   try {
-    await deleteDoc(doc(db, 'projects', projectId))
+    const firestore = checkFirestore()
+    const projectRef = doc(firestore, 'projects', projectId)
+    await deleteDoc(projectRef)
     return true
   } catch (error) {
     console.error('刪除專案失敗:', error)
@@ -118,7 +131,8 @@ export const deleteProject = async (projectId: string) => {
 
 export const createPersonalRecord = async (recordData: Omit<PersonalRecord, 'id' | 'createdAt'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'personalRecords'), {
+    const firestore = checkFirestore()
+    const docRef = await addDoc(collection(firestore, 'personalRecords'), {
       ...recordData,
       createdAt: Timestamp.now()
     })
@@ -131,14 +145,16 @@ export const createPersonalRecord = async (recordData: Omit<PersonalRecord, 'id'
 
 export const getPersonalRecords = async (projectId?: string): Promise<PersonalRecord[]> => {
   try {
-    let q = query(collection(db, 'personalRecords'), orderBy('createdAt', 'desc'))
-    
+    const firestore = checkFirestore()
+    let q
     if (projectId) {
       q = query(
-        collection(db, 'personalRecords'), 
+        collection(firestore, 'personalRecords'),
         where('projectId', '==', projectId),
         orderBy('createdAt', 'desc')
       )
+    } else {
+      q = query(collection(firestore, 'personalRecords'), orderBy('createdAt', 'desc'))
     }
     
     const querySnapshot = await getDocs(q)
@@ -154,7 +170,9 @@ export const getPersonalRecords = async (projectId?: string): Promise<PersonalRe
 
 export const deletePersonalRecord = async (recordId: string) => {
   try {
-    await deleteDoc(doc(db, 'personalRecords', recordId))
+    const firestore = checkFirestore()
+    const recordRef = doc(firestore, 'personalRecords', recordId)
+    await deleteDoc(recordRef)
     return true
   } catch (error) {
     console.error('刪除個人記錄失敗:', error)
@@ -166,7 +184,8 @@ export const deletePersonalRecord = async (recordId: string) => {
 
 export const createCoordinatorRecord = async (recordData: Omit<CoordinatorRecord, 'id' | 'createdAt'>) => {
   try {
-    const docRef = await addDoc(collection(db, 'coordinatorRecords'), {
+    const firestore = checkFirestore()
+    const docRef = await addDoc(collection(firestore, 'coordinatorRecords'), {
       ...recordData,
       createdAt: Timestamp.now()
     })
@@ -179,14 +198,16 @@ export const createCoordinatorRecord = async (recordData: Omit<CoordinatorRecord
 
 export const getCoordinatorRecords = async (projectId?: string): Promise<CoordinatorRecord[]> => {
   try {
-    let q = query(collection(db, 'coordinatorRecords'), orderBy('createdAt', 'desc'))
-    
+    const firestore = checkFirestore()
+    let q
     if (projectId) {
       q = query(
-        collection(db, 'coordinatorRecords'), 
+        collection(firestore, 'coordinatorRecords'),
         where('projectId', '==', projectId),
         orderBy('createdAt', 'desc')
       )
+    } else {
+      q = query(collection(firestore, 'coordinatorRecords'), orderBy('createdAt', 'desc'))
     }
     
     const querySnapshot = await getDocs(q)
@@ -202,7 +223,9 @@ export const getCoordinatorRecords = async (projectId?: string): Promise<Coordin
 
 export const deleteCoordinatorRecord = async (recordId: string) => {
   try {
-    await deleteDoc(doc(db, 'coordinatorRecords', recordId))
+    const firestore = checkFirestore()
+    const recordRef = doc(firestore, 'coordinatorRecords', recordId)
+    await deleteDoc(recordRef)
     return true
   } catch (error) {
     console.error('刪除統整記錄失敗:', error)
@@ -210,59 +233,78 @@ export const deleteCoordinatorRecord = async (recordId: string) => {
   }
 }
 
-// ================== 照片上傳相關操作 ==================
-// 已移除 Firebase Storage 相關功能
-// 照片上傳現在使用 NAS 或 Google Drive
-
-// ================== 即時監聽功能 ==================
+// ================== 實時監聽功能 ==================
 
 export const subscribeToProjects = (callback: (projects: Project[]) => void) => {
-  const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'))
-  return onSnapshot(q, (querySnapshot) => {
-    const projects = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Project))
-    callback(projects)
-  })
+  try {
+    const firestore = checkFirestore()
+    const q = query(collection(firestore, 'projects'), orderBy('createdAt', 'desc'))
+    return onSnapshot(q, (querySnapshot) => {
+      const projects = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Project))
+      callback(projects)
+    })
+  } catch (error) {
+    console.error('監聽專案失敗:', error)
+    callback([])
+    return () => {}
+  }
 }
 
 export const subscribeToPersonalRecords = (callback: (records: PersonalRecord[]) => void, projectId?: string) => {
-  let q = query(collection(db, 'personalRecords'), orderBy('createdAt', 'desc'))
-  
-  if (projectId) {
-    q = query(
-      collection(db, 'personalRecords'), 
-      where('projectId', '==', projectId),
-      orderBy('createdAt', 'desc')
-    )
+  try {
+    const firestore = checkFirestore()
+    let q
+    if (projectId) {
+      q = query(
+        collection(firestore, 'personalRecords'),
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc')
+      )
+    } else {
+      q = query(collection(firestore, 'personalRecords'), orderBy('createdAt', 'desc'))
+    }
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const records = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as PersonalRecord))
+      callback(records)
+    })
+  } catch (error) {
+    console.error('監聽個人記錄失敗:', error)
+    callback([])
+    return () => {}
   }
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const records = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as PersonalRecord))
-    callback(records)
-  })
 }
 
 export const subscribeToCoordinatorRecords = (callback: (records: CoordinatorRecord[]) => void, projectId?: string) => {
-  let q = query(collection(db, 'coordinatorRecords'), orderBy('createdAt', 'desc'))
-  
-  if (projectId) {
-    q = query(
-      collection(db, 'coordinatorRecords'), 
-      where('projectId', '==', projectId),
-      orderBy('createdAt', 'desc')
-    )
+  try {
+    const firestore = checkFirestore()
+    let q
+    if (projectId) {
+      q = query(
+        collection(firestore, 'coordinatorRecords'),
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc')
+      )
+    } else {
+      q = query(collection(firestore, 'coordinatorRecords'), orderBy('createdAt', 'desc'))
+    }
+    
+    return onSnapshot(q, (querySnapshot) => {
+      const records = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as CoordinatorRecord))
+      callback(records)
+    })
+  } catch (error) {
+    console.error('監聽統整記錄失敗:', error)
+    callback([])
+    return () => {}
   }
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const records = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as CoordinatorRecord))
-    callback(records)
-  })
 } 

@@ -29,7 +29,8 @@ const isFirebaseConfigured = () => {
   return !!(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET &&
+    storage // 確保 storage 已初始化
   )
 }
 
@@ -49,6 +50,9 @@ const uploadPhotoToFirebaseStorage = async (
   if (!storage) {
     throw new Error('Firebase Storage 未初始化')
   }
+  
+  // 確保 storage 不為 null 的類型斷言
+  const firebaseStorage = storage!
 
   try {
     // 生成有邏輯的檔案路徑和名稱
@@ -90,7 +94,7 @@ const uploadPhotoToFirebaseStorage = async (
     console.log(`📷 正在上傳照片到 Firebase Storage: ${fullPath}`)
     
     // 創建 Storage 引用
-    const storageRef = ref(storage, fullPath)
+    const storageRef = ref(firebaseStorage, fullPath)
     
     // 上傳檔案
     const snapshot = await uploadBytes(storageRef, file)
