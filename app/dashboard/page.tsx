@@ -18,11 +18,13 @@ import {
   Recycle
 } from 'lucide-react'
 import { storageAdapter, type PersonalRecord, type CoordinatorRecord, type Project } from '@/lib/storage-adapter'
+import PhotoManager from '@/components/PhotoManager'
+import PhotoDiagnostics from '@/components/PhotoDiagnostics'
 
 export default function DashboardPage() {
   const [personalData, setPersonalData] = useState<PersonalRecord[]>([])
   const [coordinatorData, setCoordinatorData] = useState<CoordinatorRecord[]>([])
-  const [activeTab, setActiveTab] = useState<'personal' | 'coordinator'>('personal')
+  const [activeTab, setActiveTab] = useState<'personal' | 'coordinator' | 'photos' | 'diagnostics'>('personal')
   const [selectedRecord, setSelectedRecord] = useState<PersonalRecord | CoordinatorRecord | null>(null)
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProject, setSelectedProject] = useState<string | null>(null)
@@ -259,13 +261,13 @@ export default function DashboardPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
         <button
           onClick={() => setActiveTab('personal')}
-          className={`flex-1 py-3 px-4 text-center rounded-l-lg border ${
+          className={`py-3 px-4 text-center rounded-lg border ${
             activeTab === 'personal' 
               ? 'bg-primary text-white border-primary' 
-              : 'bg-white text-gray-700 border-gray-300'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
           }`}
         >
           <Users className="w-5 h-5 inline mr-2" />
@@ -273,14 +275,36 @@ export default function DashboardPage() {
         </button>
         <button
           onClick={() => setActiveTab('coordinator')}
-          className={`flex-1 py-3 px-4 text-center rounded-r-lg border ${
+          className={`py-3 px-4 text-center rounded-lg border ${
             activeTab === 'coordinator' 
               ? 'bg-primary text-white border-primary' 
-              : 'bg-white text-gray-700 border-gray-300'
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
           }`}
         >
           <BarChart3 className="w-5 h-5 inline mr-2" />
           統整記錄 ({totalCoordinatorRecords})
+        </button>
+        <button
+          onClick={() => setActiveTab('photos')}
+          className={`py-3 px-4 text-center rounded-lg border ${
+            activeTab === 'photos' 
+              ? 'bg-primary text-white border-primary' 
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+          }`}
+        >
+          <Camera className="w-5 h-5 inline mr-2" />
+          照片管理
+        </button>
+        <button
+          onClick={() => setActiveTab('diagnostics')}
+          className={`py-3 px-4 text-center rounded-lg border ${
+            activeTab === 'diagnostics' 
+              ? 'bg-primary text-white border-primary' 
+              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+          }`}
+        >
+          <Trash2 className="w-5 h-5 inline mr-2" />
+          診斷修復
         </button>
       </div>
 
@@ -388,6 +412,19 @@ export default function DashboardPage() {
             ))
           )}
         </div>
+      )}
+
+      {/* Photo Management */}
+      {activeTab === 'photos' && (
+        <PhotoManager 
+          projects={projects}
+          selectedProject={selectedProject}
+        />
+      )}
+
+      {/* Photo Diagnostics */}
+      {activeTab === 'diagnostics' && (
+        <PhotoDiagnostics />
       )}
 
       {/* Detail Modal */}
